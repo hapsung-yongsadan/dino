@@ -106,6 +106,7 @@
   <div class="card">
     <h2>👻 하늘나라로 떠났어요</h2>
     <p id="deadText"></p>
+    <button id="bRevive" style="margin-bottom:10px;background:#7b5cff;box-shadow:0 4px 0 #5638d6">👼 부활시키기</button>
     <button id="bRestart">새 알 줍기</button>
   </div>
 </div>
@@ -118,6 +119,10 @@
 const SPEED = Number(new URLSearchParams(location.search).get('speed')) || 1;
 const SAVE_KEY = 'dino-v1';
 const DEX_KEY = 'dino-dex-v1';            // 세대를 넘어 유지되는 도감
+const WALLET_KEY = 'dino-wallet-v1';      // 영자코인 지갑 (세대를 넘어 유지)
+const PID_KEY = 'dino-pid';               // 플레이어 고유 ID
+// 영자코인 선물코드 검증용 공개키 (비밀키는 운영자만 보관)
+const GIFT_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"lBxGmP1H1AXgCA1xTDTOwP-HbViuYr6aPi68ua7GSWg","y":"ggl7484p59GesqdePUiUWUyoVFfq3CdGGNK5hXcYP4c"};
 const MAX_OFFLINE_MIN = 60 * 24 * 3;      // 꺼져 있던 시간은 최대 3일 반영
 const RATE = { hunger: 0.55, happy: 0.45, energy: 0.3, sleepRecover: 1.5 }; // 게임 1분당
 
@@ -192,7 +197,18 @@ const PALETTES = {
   ocean:   { name: '바다',    bg: '#bfe3f0', ink: '#123a5a', price: 40 },
   night:   { name: '밤하늘',  bg: '#2f2a4a', ink: '#e4dcff', price: 60 },
   candy:   { name: '캔디',    bg: '#ffd9ec', ink: '#7a1f55', price: 60 },
+  gold:    { name: '황금',    bg: '#ffe9a8', ink: '#6b4400', gems: 5 },
+  galaxy:  { name: '은하수',  bg: '#0d1030', ink: '#7ff3ff', gems: 8 },
 };
+
+// 💎 영자 상점
+const GEM_SHOP = [
+  { id: 'heal',    icon: '✨', name: '만능 회복',     sub: '모든 수치 100 · 병 치료', gems: 3 },
+  { id: 'return',  icon: '🏃', name: '탐험 즉시 귀환', sub: '탐험 중일 때 바로 돌아와요', gems: 3 },
+  { id: 'coins',   icon: '🪙', name: '코인 50개',      sub: '일반 코인으로 교환', gems: 1 },
+  { id: 'revive',  icon: '👼', name: '부활권',         sub: '떠난 공룡을 되살려요 (가방에 보관)', gems: 10 },
+  { id: 'fixType', icon: '🧬', name: '진화 확정권',    sub: '어른이 될 종류를 직접 골라요', gems: 15 },
+];
 
 /* =========================================================
    스프라이트 (# = 잉크, o = 눈(잘 땐 감김), 오른쪽을 봄)
@@ -285,10 +301,54 @@ function loadDex() { try { return JSON.parse(localStorage.getItem(DEX_KEY)) || {
 function saveDex() { localStorage.setItem(DEX_KEY, JSON.stringify(DEX)); }
 let DEX = loadDex();
 
+/* ---------- 영자코인 지갑 / 플레이어 ID ---------- */
+function loadWallet() { try { return JSON.parse(localStorage.getItem(WALLET_KEY)) || { gems: 0, revive: 0, used: {} }; } catch { return { gems: 0, revive: 0, used: {} }; } }
+function saveWallet() { localStorage.setItem(WALLET_KEY, JSON.stringify(WALLET)); }
+let WALLET = loadWallet();
+let PID = localStorage.getItem(PID_KEY);
+if (!PID) {
+  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  PID = Array.from({ length: 6 }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+  localStorage.setItem(PID_KEY, PID);
+}
+
+/* ---------- 선물코드: payload.signature (ECDSA P-256) ---------- */
+const b64u = {
+  dec: s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0)),
+};
+async function redeemGift(code) {
+  try {
+    code = (code || '').trim();
+    if (code.includes('gift=')) code = new URL(code).searchParams.get('gift');
+    const [p, sig] = code.split('.');
+    if (!p || !sig) return { ok: false, msg: '코드 형식이 올바르지 않아요' };
+    const key = await crypto.subtle.importKey('jwk', GIFT_PUBLIC_KEY, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const valid = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64u.dec(sig), new TextEncoder().encode(p));
+    if (!valid) return { ok: false, msg: '가짜 코드예요 🙅' };
+    const data = JSON.parse(new TextDecoder().decode(b64u.dec(p)));
+    if (data.to !== '*' && data.to !== PID) return { ok: false, msg: '다른 사람에게 보낸 선물이에요' };
+    if (data.exp && Date.now() > data.exp) return { ok: false, msg: '기간이 지난 코드예요' };
+    if (WALLET.used[data.n]) return { ok: false, msg: '이미 받은 선물이에요' };
+    WALLET.used[data.n] = Date.now();
+    WALLET.gems += data.g;
+    saveWallet();
+    return { ok: true, msg: `🎁 영자코인 💎${data.g}개를 받았어요!${data.m ? `\n"${data.m}"` : ''}` };
+  } catch (e) {
+    return { ok: false, msg: '코드를 읽을 수 없어요' };
+  }
+}
+async function giftPrompt() {
+  const c = prompt('선물 코드나 링크를 붙여넣어 주세요');
+  if (!c) return;
+  const r = await redeemGift(c);
+  alert(r.msg); after();
+}
+
 const stageOf = s => STAGES.find(st => s.ageMin < st.until);
 const spriteKey = s => s.dead ? 'ghost' : (stageOf(s).id === 'adult' ? s.type : stageOf(s).id);
 
 function decideType(s) {
+  if (s.fixedType) return s.fixedType;
   const diet = s.meat >= s.plant ? 'meat' : 'plant';
   const top = ['str', 'spd', 'int'].reduce((a, b) => (s[b] > s[a] ? b : a), 'int');
   return Object.keys(DINOS).find(k => DINOS[k].diet === diet && DINOS[k].stat === top);
@@ -499,8 +559,9 @@ const ACTIONS = {
       return { icon: it.icon, label: it.name, sub: effectText(it), right: `🪙${price}`, disabled: S.coins < price, keep: true,
         fn: () => { S.coins -= price; S.inv[id] = (S.inv[id] || 0) + 1; say(`${it.icon} ${it.name} 구매!`); ACTIONS.shop(); } };
     });
+    rows.unshift({ icon: '💎', label: '영자 상점', sub: '영자코인으로 특별한 것들을 살 수 있어요', right: `💎${WALLET.gems}`, keep: true, fn: gemShop });
     for (const [id, p] of Object.entries(PALETTES)) {
-      if (S.palettes.includes(id)) continue;
+      if (S.palettes.includes(id) || p.gems) continue;
       rows.push({ icon: '🎨', label: `화면 테마: ${p.name}`, sub: '한 번 사면 계속 쓸 수 있어요', right: `🪙${p.price}`, disabled: S.coins < p.price, keep: true,
         fn: () => { S.coins -= p.price; S.palettes.push(id); S.palette = id; say(`🎨 ${p.name} 테마 적용!`); ACTIONS.shop(); } });
     }
@@ -513,10 +574,69 @@ const ACTIONS = {
       { icon: '🦕', label: '공룡 도감', sub: `${Object.keys(DEX.dinos).length} / ${Object.keys(DINOS).length}종`, keep: true, fn: showDinoDex },
       { icon: '🦴', label: '화석 도감', sub: `${Object.keys(DEX.fossils).length} / ${Object.keys(FOSSILS).length}개`, keep: true, fn: showFossilDex },
       { icon: '🎨', label: '화면 테마', sub: PALETTES[S.palette].name, keep: true, fn: showPalettes },
+      { icon: '🎁', label: '선물 코드 입력', sub: '운영자에게 받은 영자코인 코드', fn: giftPrompt },
+      { icon: '🆔', label: `내 ID: ${PID}`, sub: '눌러서 복사 · 선물 받을 때 알려주세요', keep: true,
+        fn: () => { navigator.clipboard?.writeText(PID).then(() => say('ID를 복사했어요 📋'), () => say(`내 ID: ${PID}`)); } },
       { icon: '🔄', label: '처음부터 다시', sub: '지금 공룡과 헤어져요 (도감은 유지)', keep: true, fn: confirmReset },
     ]);
   },
 };
+
+/* ---------- 💎 영자 상점 ---------- */
+function spendGems(n) {
+  if (WALLET.gems < n) { say('영자코인이 부족해요 💎'); return false; }
+  WALLET.gems -= n; saveWallet(); return true;
+}
+function gemShop() {
+  const rows = GEM_SHOP.map(g => {
+    let disabled = WALLET.gems < g.gems, sub = g.sub;
+    if (g.id === 'return' && !S.explore) { disabled = true; sub = '탐험 중일 때만 쓸 수 있어요'; }
+    if (g.id === 'fixType' && stageOf(S).id === 'adult') { disabled = true; sub = '이미 어른이에요'; }
+    if (g.id === 'fixType' && S.fixedType) sub = `확정됨: ${DINOS[S.fixedType].name}`;
+    if (g.id === 'revive') sub += ` · 보유 ${WALLET.revive || 0}개`;
+    return { icon: g.icon, label: g.name, sub, right: `💎${g.gems}`, disabled, keep: true, fn: () => buyGem(g) };
+  });
+  for (const [id, p] of Object.entries(PALETTES)) {
+    if (!p.gems || S.palettes.includes(id)) continue;
+    rows.push({ icon: '🎨', label: `특별 테마: ${p.name}`, sub: '영자코인 전용 화면 테마', right: `💎${p.gems}`, disabled: WALLET.gems < p.gems, keep: true,
+      fn: () => { if (!spendGems(p.gems)) return; S.palettes.push(id); S.palette = id; say(`🎨 ${p.name} 테마 적용!`); gemShop(); } });
+  }
+  rows.push({ icon: '🎁', label: '선물 코드 입력', keep: true, fn: giftPrompt });
+  rows.push({ icon: '←', label: '일반 상점으로', keep: true, fn: ACTIONS.shop });
+  openSheet('💎 영자 상점', rows, { right: `💎 ${WALLET.gems}`, html: '<div class="note">영자코인은 운영자에게 선물로 받을 수 있어요. 공룡이 바뀌어도 그대로 남아요.</div>' });
+}
+function buyGem(g) {
+  if (g.id === 'fixType') return chooseFixType(g);
+  if (!spendGems(g.gems)) return;
+  if (g.id === 'heal') {
+    Object.assign(S, { hunger: 100, happy: 100, energy: 100, clean: 100, health: 100, sick: false, poops: 0 });
+    say('✨ 완전히 회복했어요!', 'heart');
+  } else if (g.id === 'return') {
+    finishExplore(S); flushEvents();
+  } else if (g.id === 'coins') {
+    S.coins += 50; say('🪙 코인 50개를 받았어요');
+  } else if (g.id === 'revive') {
+    WALLET.revive = (WALLET.revive || 0) + 1; saveWallet(); say('👼 부활권을 보관했어요');
+  }
+  after(); gemShop();
+}
+function chooseFixType(g) {
+  openSheet('🧬 어떤 공룡으로 키울까요?', Object.entries(DINOS).map(([k, d]) => ({
+    icon: '🦖', label: d.name, sub: `원래 조건: ${d.hint}`, right: `💎${g.gems}`, keep: true,
+    fn: () => { if (!spendGems(g.gems)) return; S.fixedType = k; say(`🧬 ${d.name}(으)로 자라도록 확정했어요!`); after(); gemShop(); },
+  })).concat([{ icon: '←', label: '뒤로', keep: true, fn: gemShop }]));
+}
+function revive() {
+  if (!(WALLET.revive > 0)) {
+    if (WALLET.gems < 10) return alert('부활권이 없어요. 영자코인 💎10개가 필요해요.');
+    WALLET.gems -= 10;
+  } else WALLET.revive--;
+  saveWallet();
+  Object.assign(S, { dead: false, hunger: 70, happy: 70, energy: 70, clean: 100, health: 60, sick: false, poops: 0, sleeping: false, explore: null });
+  $('ovDead').classList.remove('show');
+  lastReal = Date.now(); acc = 0;
+  say('👼 다시 돌아왔어요!'); after();
+}
 
 function effectText(it) {
   const t = [];
@@ -696,7 +816,7 @@ function renderUI() {
   $('name').textContent = S.name;
   const label = st.id === 'adult' ? DINOS[S.type].name : st.name;
   $('age').textContent = `${label} · ${Math.floor(S.ageMin / 1440) + 1}일째`;
-  let status = `🪙 ${S.coins} · 💪${S.str} ⚡${S.spd} 🧠${S.int}`;
+  let status = `🪙 ${S.coins} 💎 ${WALLET.gems} · 💪${S.str} ⚡${S.spd} 🧠${S.int}`;
   if (S.explore) status += ` · ${LOCS[S.explore.loc].icon} ${Math.ceil(S.explore.left)}분 남음`;
   $('status').textContent = status;
   const items = [
@@ -725,6 +845,7 @@ function showDead() {
   const d = Math.floor(S.ageMin / 1440), h = Math.floor(S.ageMin % 1440 / 60);
   const t = S.type ? `${DINOS[S.type].name} ` : '';
   $('deadText').textContent = `${t}${S.name}는 ${d}일 ${h}시간을 함께했어요.`;
+  $('bRevive').textContent = WALLET.revive > 0 ? `👼 부활권 사용 (보유 ${WALLET.revive})` : `👼 부활시키기 (💎10)`;
   $('ovDead').classList.add('show');
 }
 function resetGame() {
@@ -739,6 +860,16 @@ $('bStart').onclick = () => {
   say('알이 꿈틀거려요…');
 };
 $('bRestart').onclick = resetGame;
+$('bRevive').onclick = revive;
+
+// 선물 링크(?gift=...)로 들어오면 자동으로 받기
+(async () => {
+  const g = new URLSearchParams(location.search).get('gift');
+  if (!g) return;
+  const r = await redeemGift(g);
+  const u = new URL(location.href); u.searchParams.delete('gift'); history.replaceState(null, '', u);
+  setTimeout(() => { alert(r.msg); renderUI(); }, 300);
+})();
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) save(); else if (S && !S.dead) { catchUp(); renderUI(); if (S.dead) showDead(); }
 });

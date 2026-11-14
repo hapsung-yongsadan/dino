@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>영자코인 발급</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; font-family: -apple-system, "Apple SD Gothic Neo", sans-serif; background: #f3f0ff; color: #222; }
+  .box { max-width: 420px; margin: 0 auto; background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 18px; color: #777; font-size: 13px; }
+  label { display: block; font-size: 13px; font-weight: 700; margin: 14px 0 6px; }
+  input, textarea { width: 100%; padding: 11px; font-size: 16px; border: 2px solid #ddd6ff; border-radius: 10px; font-family: inherit; }
+  textarea { font-size: 12px; height: 80px; }
+  .amts { display: flex; gap: 6px; margin-top: 6px; }
+  .amts button { flex: 1; padding: 8px 0; font-size: 14px; background: #ede8ff; color: #5638d6; box-shadow: none; }
+  button { width: 100%; border: none; border-radius: 12px; padding: 13px; font-size: 16px; font-weight: 800; color: #fff; background: #7b5cff; box-shadow: 0 4px 0 #5638d6; margin-top: 16px; cursor: pointer; font-family: inherit; }
+  button.sec { background: #fff; color: #7b5cff; border: 2px solid #7b5cff; box-shadow: none; }
+  .out { display: none; margin-top: 18px; background: #f7f5ff; border-radius: 12px; padding: 14px; }
+  .out code { display: block; word-break: break-all; font-size: 12px; background: #fff; padding: 10px; border-radius: 8px; margin: 8px 0; }
+  .hint { font-size: 12px; color: #888; margin-top: 6px; line-height: 1.5; }
+  .ok { color: #2f9d4a; font-size: 13px; font-weight: 700; }
+  #keySection.done textarea { display: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>💎 영자코인 발급</h1>
+  <p class="sub">공룡 키우기 운영자 전용 페이지</p>
+
+  <div id="keySection">
+    <label>운영자 키</label>
+    <textarea id="key" placeholder='{"kty":"EC", ... "d":"..."} 형태의 영자키를 붙여넣으세요'></textarea>
+    <div class="hint" id="keyState">처음 한 번만 넣으면 이 기기 브라우저에 기억돼요. 키는 절대 다른 사람에게 보내지 마세요.</div>
+  </div>
+
+  <label>받는 사람 ID</label>
+  <input id="to" placeholder="예: K7P2QX (비워두면 아무나 1회)" maxlength="6" style="text-transform:uppercase">
+  <div class="hint">게임 메뉴 → 내 ID에서 확인할 수 있어요. ID를 넣으면 그 사람만 받을 수 있어요.</div>
+
+  <label>영자코인 개수</label>
+  <input id="amt" type="number" min="1" value="10" inputmode="numeric">
+  <div class="amts">
+    <button data-v="5">5</button><button data-v="10">10</button><button data-v="30">30</button><button data-v="100">100</button>
+  </div>
+
+  <label>메시지 (선택)</label>
+  <input id="memo" maxlength="40" placeholder="예: 이벤트 당첨 축하해요!">
+
+  <label>유효기간</label>
+  <input id="days" type="number" min="0" value="7" inputmode="numeric">
+  <div class="hint">일 단위 · 0이면 기한 없음</div>
+
+  <button id="make">선물 링크 만들기</button>
+
+  <div class="out" id="out">
+    <div class="ok" id="outInfo"></div>
+    <code id="link"></code>
+    <button id="share">📤 공유하기</button>
+    <button id="copy" class="sec">📋 링크 복사</button>
+  </div>
+</div>
+
+<script>
+const GAME_URL = new URL('./', location.href).href;
+const KEY_STORE = 'dino-admin-key';
+const $ = id => document.getElementById(id);
+const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+function loadKey() { return localStorage.getItem(KEY_STORE); }
+function refreshKeyState() {
+  if (loadKey()) {
+    $('keySection').classList.add('done');
+    $('keyState').innerHTML = '✅ 운영자 키가 등록돼 있어요 · <a href="#" id="clearKey">키 지우기</a>';
+    $('clearKey').onclick = e => { e.preventDefault(); if (confirm('이 기기에서 운영자 키를 지울까요?')) { localStorage.removeItem(KEY_STORE); location.reload(); } };
+  }
+}
+refreshKeyState();
+
+document.querySelectorAll('.amts button').forEach(b => b.onclick = () => $('amt').value = b.dataset.v);
+
+$('make').onclick = async () => {
+  try {
+    let jwkText = loadKey() || $('key').value.trim();
+    if (!jwkText) return alert('운영자 키를 먼저 붙여넣어 주세요');
+    const jwk = JSON.parse(jwkText);
+    if (!jwk.d) return alert('비밀키(d)가 없는 키예요. 영자키 파일 내용을 그대로 넣어주세요.');
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    if (!loadKey()) { localStorage.setItem(KEY_STORE, jwkText); refreshKeyState(); }
+
+    const g = parseInt($('amt').value, 10);
+    if (!(g > 0)) return alert('개수를 확인해 주세요');
+    const to = ($('to').value.trim().toUpperCase()) || '*';
+    const days = parseInt($('days').value, 10) || 0;
+    const data = { to, g, n: crypto.randomUUID().slice(0, 12) };
+    if (days > 0) data.exp = Date.now() + days * 86400000;
+    const memo = $('memo').value.trim(); if (memo) data.m = memo;
+
+    const p = b64u(new TextEncoder().encode(JSON.stringify(data)));
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(p)));
+    const link = `${GAME_URL}?gift=${p}.${b64u(sig)}`;
+
+    $('link').textContent = link;
+    $('outInfo').textContent = `💎${g}개 · ${to === '*' ? '누구나 1회' : to + ' 전용'}${days ? ` · ${days}일 유효` : ''}`;
+    $('out').style.display = 'block';
+    $('out').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    alert('링크를 만들지 못했어요. 운영자 키가 맞는지 확인해 주세요.\n' + e.message);
+  }
+};
+$('copy').onclick = () => navigator.clipboard.writeText($('link').textContent).then(() => alert('복사했어요!'));
+$('share').onclick = () => {
+  const text = `🦖 공룡 키우기 선물이 도착했어요! 💎${$('amt').value}개`;
+  if (navigator.share) navigator.share({ title: '공룡 키우기 선물', text, url: $('link').textContent }).catch(() => {});
+  else $('copy').click();
+};
+</script>
+</body>
+</html>
