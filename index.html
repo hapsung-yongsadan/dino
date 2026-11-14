@@ -12,26 +12,44 @@
     user-select: none; -webkit-user-select: none;
   }
   .device {
-    width: min(380px, 96vw); padding: 18px 16px 20px; border-radius: 36px;
+    width: min(380px, 96vw); padding: 16px 14px 18px; border-radius: 36px;
     background: radial-gradient(circle at 30% 15%, #8fd16a, #3f9a3a); box-shadow: 0 14px 30px rgba(0,0,0,.25), inset 0 -6px 0 rgba(0,0,0,.15);
-    display: flex; flex-direction: column; align-items: center; gap: 9px; margin: 12px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 12px 0;
   }
+  .device.fight { background: radial-gradient(circle at 30% 15%, #e0775a, #8f2f1f); }
   .top { color: #fff; font-weight: 800; font-size: 16px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
   .top small { display: block; font-weight: 600; font-size: 12px; opacity: .92; }
   .screen-wrap { background: #33402a; padding: 9px; border-radius: 14px; box-shadow: inset 0 2px 6px rgba(0,0,0,.5); }
   canvas { display: block; width: 288px; height: 216px; image-rendering: pixelated; border-radius: 6px; touch-action: manipulation; }
   .status { color: #fff; font-size: 13px; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
-  .msg { min-height: 20px; color: #fffbe0; font-size: 14px; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+  .msg { min-height: 20px; color: #fffbe0; font-size: 14px; font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.3); white-space: pre-line; }
   .bars { width: 100%; background: rgba(255,255,255,.88); border-radius: 14px; padding: 9px 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
   .bar { display: grid; grid-template-columns: 40px 1fr; align-items: center; font-size: 11.5px; gap: 5px; color: #333; font-weight: 600; }
-  .bar .track { height: 8px; background: #e4e4e4; border-radius: 5px; overflow: hidden; }
-  .bar .fill { height: 100%; border-radius: 5px; transition: width .4s; }
-  .btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .bar.wide { grid-column: span 2; grid-template-columns: 40px 1fr 70px; }
+  .bar.wide span:last-child { text-align: right; color: #777; font-size: 11px; }
+  .track { height: 8px; background: #e4e4e4; border-radius: 5px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 5px; transition: width .35s; }
+  .btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+  .btns button { padding: 7px 0 6px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .btns button b { font-size: 20px; line-height: 1; }
+  .btns button.hunt { color: #b8321f; box-shadow: 0 4px 0 #8f2f1f; }
   button {
     border: none; border-radius: 14px; padding: 10px 0; font-size: 14px; font-weight: 800; color: #2f7d2c; background: #fff;
     box-shadow: 0 4px 0 #2b6e28; cursor: pointer; font-family: inherit;
   }
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #2b6e28; }
+  button:disabled { opacity: .45; }
+
+  /* 전투 패널 */
+  .battle { display: none; width: 100%; background: rgba(255,255,255,.92); border-radius: 14px; padding: 10px 11px; }
+  .device.fight .battle { display: block; }
+  .device.fight .bars, .device.fight .btns { display: none; }
+  .bt-row { display: grid; grid-template-columns: 96px 1fr 62px; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #333; margin-bottom: 7px; }
+  .bt-row .track { height: 10px; }
+  .bt-row small { text-align: right; color: #666; font-weight: 600; }
+  .bt-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+  .bt-btns button { font-size: 13px; padding: 10px 0; color: #8f2f1f; box-shadow: 0 4px 0 #8f2f1f; }
+  .bt-btns.two { grid-template-columns: 1fr 1fr; }
 
   /* 시트 메뉴 */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; z-index: 10; }
@@ -66,28 +84,43 @@
   .card p { margin: 0 0 14px; font-size: 14px; color: #555; line-height: 1.5; }
   .card input { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #3f9a3a; border-radius: 10px; margin-bottom: 12px; text-align: center; }
   .card button { width: 100%; background: #3f9a3a; color: #fff; box-shadow: 0 4px 0 #2b6e28; }
+
+  .toast {
+    position: fixed; top: 18%; left: 50%; transform: translate(-50%, -20px); opacity: 0; pointer-events: none; z-index: 20;
+    background: linear-gradient(135deg, #ffd84d, #ff9f1c); color: #5a2a00; font-weight: 900; font-size: 20px;
+    padding: 14px 22px; border-radius: 18px; box-shadow: 0 8px 24px rgba(0,0,0,.3); transition: all .35s; text-align: center; white-space: pre-line;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
 </style>
 </head>
 <body>
 
-<div class="device">
+<div class="device" id="device">
   <div class="top"><span id="name">-</span><small id="age">-</small></div>
   <div class="screen-wrap" id="screen"><canvas id="cv" width="64" height="48"></canvas></div>
   <div class="status" id="status"></div>
   <div class="msg" id="msg"></div>
   <div class="bars" id="bars"></div>
   <div class="btns">
-    <button data-act="feed">🍖 먹이</button>
-    <button data-act="wash">🛁 씻기</button>
-    <button data-act="sleep" id="bSleep">💤 재우기</button>
-    <button data-act="play">🎮 놀기</button>
-    <button data-act="explore">🗺️ 탐험</button>
-    <button data-act="train">💪 훈련</button>
-    <button data-act="bag">🎒 가방</button>
-    <button data-act="shop">🏪 상점</button>
-    <button data-act="menu">📖 메뉴</button>
+    <button data-act="feed"><b>🍖</b>먹이</button>
+    <button data-act="wash"><b>🛁</b>씻기</button>
+    <button data-act="sleep" id="bSleep"><b>💤</b>재우기</button>
+    <button data-act="play"><b>🎮</b>놀기</button>
+    <button data-act="hunt" class="hunt"><b>⚔️</b>사냥</button>
+    <button data-act="explore"><b>🗺️</b>탐험</button>
+    <button data-act="train"><b>💪</b>훈련</button>
+    <button data-act="bag"><b>🎒</b>가방</button>
+    <button data-act="shop"><b>🏪</b>상점</button>
+    <button data-act="menu"><b>📖</b>메뉴</button>
+  </div>
+  <div class="battle" id="battle">
+    <div class="bt-row"><span id="btMe">-</span><div class="track"><div class="fill" id="btMeHp" style="background:#48c774"></div></div><small id="btMeHpT"></small></div>
+    <div class="bt-row"><span id="btFoe">-</span><div class="track"><div class="fill" id="btFoeHp" style="background:#ff5a4a"></div></div><small id="btFoeHpT"></small></div>
+    <div class="bt-btns" id="btBtns"></div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <div class="overlay sheet" id="sheet">
   <div class="sheet-box" id="sheetBox"></div>
@@ -125,34 +158,41 @@ const PID_KEY = 'dino-pid';               // 플레이어 고유 ID
 const GIFT_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"lBxGmP1H1AXgCA1xTDTOwP-HbViuYr6aPi68ua7GSWg","y":"ggl7484p59GesqdePUiUWUyoVFfq3CdGGNK5hXcYP4c"};
 const MAX_OFFLINE_MIN = 60 * 24 * 3;      // 꺼져 있던 시간은 최대 3일 반영
 const RATE = { hunger: 0.55, happy: 0.45, energy: 0.3, sleepRecover: 1.5 }; // 게임 1분당
+const MAX_LV = 50;
 
+// 성장 단계: 알은 시간, 그 뒤로는 레벨로 진화
 const STAGES = [
-  { id: 'egg',   name: '알',       until: 1 },
-  { id: 'baby',  name: '아기 공룡', until: 60 },
-  { id: 'child', name: '꼬마 공룡', until: 60 * 24 },
-  { id: 'adult', name: '어른 공룡', until: Infinity },
+  { id: 'egg',      name: '알' },
+  { id: 'baby',     name: '아기 공룡' },
+  { id: 'child',    name: '꼬마 공룡', lv: 5 },
+  { id: 'adult',    name: '어른 공룡', lv: 12 },
+  { id: 'ultimate', name: '궁극 공룡', lv: 25 },
 ];
-const STAGE_IDX = { egg: 0, baby: 1, child: 2, adult: 3 };
+const STAGE_ORDER = STAGES.map(s => s.id);
+const STAGE_IDX = Object.fromEntries(STAGE_ORDER.map((id, i) => [id, i]));
+const STAGE_MULT = { egg: 0.8, baby: 0.8, child: 1, adult: 1.3, ultimate: 1.7 };
 
 // 진화: 식성(고기/풀) × 가장 높은 능력치
 const DINOS = {
-  trex:   { name: '티라노사우루스',   diet: 'meat',  stat: 'str', hint: '고기 + 힘' },
-  raptor: { name: '벨로키랍토르',     diet: 'meat',  stat: 'spd', hint: '고기 + 속도' },
-  spino:  { name: '스피노사우루스',   diet: 'meat',  stat: 'int', hint: '고기 + 지능' },
-  tri:    { name: '트리케라톱스',     diet: 'plant', stat: 'str', hint: '풀 + 힘' },
-  ptera:  { name: '프테라노돈',       diet: 'plant', stat: 'spd', hint: '풀 + 속도' },
-  brachio:{ name: '브라키오사우루스', diet: 'plant', stat: 'int', hint: '풀 + 지능' },
+  trex:   { name: '티라노사우루스',   ult: '폭군 티라노',     diet: 'meat',  stat: 'str', hint: '고기 + 힘',   bonus: '공격 +15%' },
+  raptor: { name: '벨로키랍토르',     ult: '그림자 랩터',     diet: 'meat',  stat: 'spd', hint: '고기 + 속도', bonus: '속도 +30%' },
+  spino:  { name: '스피노사우루스',   ult: '심해의 스피노',   diet: 'meat',  stat: 'int', hint: '고기 + 지능', bonus: '필살기 강화' },
+  tri:    { name: '트리케라톱스',     ult: '강철 트리케라',   diet: 'plant', stat: 'str', hint: '풀 + 힘',     bonus: '방어 +30%' },
+  ptera:  { name: '프테라노돈',       ult: '폭풍 프테라',     diet: 'plant', stat: 'spd', hint: '풀 + 속도',   bonus: '회피·치명 ↑' },
+  brachio:{ name: '브라키오사우루스', ult: '천공 브라키오',   diet: 'plant', stat: 'int', hint: '풀 + 지능',   bonus: 'HP +25%' },
 };
 
 const ITEMS = {
-  meat:  { name: '고기',   icon: '🍖', kind: 'food', diet: 'meat',  hunger: 25 },
-  leaf:  { name: '풀잎',   icon: '🌿', kind: 'food', diet: 'plant', hunger: 25 },
-  fish:  { name: '생선',   icon: '🐟', kind: 'food', diet: 'meat',  hunger: 25, happy: 8 },
-  fruit: { name: '열매',   icon: '🍎', kind: 'food', diet: 'plant', hunger: 20, happy: 10 },
-  cake:  { name: '케이크', icon: '🍰', kind: 'food', hunger: 10, happy: 30 },
-  honey: { name: '꿀물',   icon: '🍯', kind: 'drink', energy: 35 },
-  med:   { name: '약',     icon: '💊', kind: 'med' },
+  meat:   { name: '고기',   icon: '🍖', kind: 'food', diet: 'meat',  hunger: 25 },
+  leaf:   { name: '풀잎',   icon: '🌿', kind: 'food', diet: 'plant', hunger: 25 },
+  fish:   { name: '생선',   icon: '🐟', kind: 'food', diet: 'meat',  hunger: 25, happy: 8 },
+  fruit:  { name: '열매',   icon: '🍎', kind: 'food', diet: 'plant', hunger: 20, happy: 10 },
+  cake:   { name: '케이크', icon: '🍰', kind: 'food', hunger: 10, happy: 30 },
+  honey:  { name: '꿀물',   icon: '🍯', kind: 'drink', energy: 35 },
+  potion: { name: '회복약', icon: '🧪', kind: 'potion', heal: 0.5 },
+  med:    { name: '약',     icon: '💊', kind: 'med' },
 };
+const FOOD_HEAL = 0.15; // 음식은 최대 HP의 15% 회복
 
 const FOSSILS = {
   fern:      { name: '고사리 화석',   icon: '🌿' },
@@ -170,24 +210,58 @@ const FOSSILS = {
 };
 
 const LOCS = {
-  forest:  { name: '숲',   icon: '🌳', min: 5,  energy: 15, need: 'baby',  coins: [3, 10],
+  forest:  { name: '숲',   icon: '🌳', min: 5,  energy: 15, need: 'baby',  coins: [3, 10],  exp: 15,
              items: ['fruit', 'fruit', 'leaf', 'honey'], fossils: ['fern', 'amber', 'footprint', 'trilobite'], gain: 'int' },
-  sea:     { name: '바다', icon: '🌊', min: 10, energy: 20, need: 'child', coins: [5, 15],
-             items: ['fish', 'fish', 'fruit'], fossils: ['ammonite', 'scorpion', 'trilobite'], gain: 'spd' },
-  volcano: { name: '화산', icon: '🌋', min: 20, energy: 30, need: 'child', coins: [10, 25],
-             items: ['meat', 'honey', 'meat'], fossils: ['glass', 'trexTooth', 'raptorClaw'], gain: 'str' },
-  cave:    { name: '동굴', icon: '🕳️', min: 30, energy: 35, need: 'adult', coins: [15, 40],
-             items: ['cake', 'med', 'honey'], fossils: ['triHorn', 'pteroBone', 'eggFossil', 'amber'], gain: 'int' },
+  sea:     { name: '바다', icon: '🌊', min: 10, energy: 20, need: 'child', coins: [5, 15],  exp: 35,
+             items: ['fish', 'fish', 'fruit', 'potion'], fossils: ['ammonite', 'scorpion', 'trilobite'], gain: 'spd' },
+  volcano: { name: '화산', icon: '🌋', min: 20, energy: 30, need: 'child', coins: [10, 25], exp: 70,
+             items: ['meat', 'honey', 'potion'], fossils: ['glass', 'trexTooth', 'raptorClaw'], gain: 'str' },
+  cave:    { name: '동굴', icon: '🕳️', min: 30, energy: 35, need: 'adult', coins: [15, 40], exp: 150,
+             items: ['cake', 'med', 'potion'], fossils: ['triHorn', 'pteroBone', 'eggFossil', 'amber'], gain: 'int' },
 };
 
 const TRAINS = {
-  str: { name: '힘',   icon: '💪', act: '바위 들기' },
-  spd: { name: '속도', icon: '⚡', act: '달리기' },
-  int: { name: '지능', icon: '🧠', act: '퍼즐 풀기' },
+  str: { name: '힘',   icon: '💪', act: '바위 들기', desc: 'HP·공격력' },
+  spd: { name: '속도', icon: '⚡', act: '달리기',   desc: '회피·선공' },
+  int: { name: '지능', icon: '🧠', act: '퍼즐 풀기', desc: '치명타·필살기' },
 };
 
+/* ---------- 사냥터 / 몬스터 ---------- */
+// spr: 스프라이트 이름, flip: 공룡 스프라이트를 왼쪽으로 뒤집을지
+const ZONES = {
+  field: { name: '풀밭', icon: '🌾', lv: 1,
+    mobs: [
+      { name: '큰잠자리', spr: 'fly',  hp: 23, atk: 5,  def: 0,  spd: 9,  exp: 8,  coins: [2, 4], drops: [['fruit', .2]] },
+      { name: '딱정벌레', spr: 'bug',  hp: 32, atk: 4,  def: 2,  spd: 4,  exp: 10, coins: [2, 5], drops: [['leaf', .2]] },
+      { name: '원시쥐',   spr: 'rat',  hp: 21, atk: 6,  def: 1,  spd: 10, exp: 9,  coins: [3, 5], drops: [['meat', .25]] },
+    ],
+    boss: { name: '왕딱정벌레', spr: 'bug', hp: 90, atk: 9, def: 3, spd: 5, exp: 70, coins: [30, 45], drops: [['potion', 1], ['cake', .5]] } },
+  swamp: { name: '늪지', icon: '🐊', lv: 5,
+    mobs: [
+      { name: '원시악어',   spr: 'croc',   hp: 108, atk: 19, def: 5, spd: 7,  exp: 42, coins: [6, 12], drops: [['meat', .3]] },
+      { name: '거대개구리', spr: 'frog',   hp: 81, atk: 15, def: 3, spd: 11, exp: 36, coins: [6, 10], drops: [['potion', .1]] },
+      { name: '늪도마뱀',   spr: 'lizard', hp: 90, atk: 18, def: 4, spd: 12, exp: 39, coins: [7, 12], drops: [['fish', .3]] },
+    ],
+    boss: { name: '늪의 왕 사르코수쿠스', spr: 'croc', hp: 230, atk: 22, def: 8, spd: 9, exp: 260, coins: [100, 150], drops: [['potion', 1], ['honey', 1]] } },
+  volcano: { name: '화산지대', icon: '🌋', lv: 12,
+    mobs: [
+      { name: '화염도마뱀', spr: 'lizard', hp: 228, atk: 41, def: 10, spd: 16, exp: 110,  coins: [15, 25], drops: [['meat', .3]] },
+      { name: '야생 랩터',  spr: 'raptor', flip: true, hp: 190, atk: 46, def: 8, spd: 22, exp: 117, coins: [15, 30], drops: [['potion', .15]] },
+      { name: '용암거북',   spr: 'turtle', hp: 342, atk: 32, def: 25, spd: 4, exp: 130, coins: [20, 30], drops: [['honey', .25]] },
+    ],
+    boss: { name: '폭군 티라노', spr: 'trex', flip: true, hp: 520, atk: 48, def: 18, spd: 14, exp: 750, coins: [300, 400], drops: [['potion', 1], ['cake', 1]] } },
+  ruins: { name: '고대 유적', icon: '🏛️', lv: 20,
+    mobs: [
+      { name: '안킬로사우루스',   spr: 'ankylo', hp: 560, atk: 48, def: 40, spd: 6,  exp: 228, coins: [30, 50], drops: [['potion', .2]] },
+      { name: '케찰코아틀루스',   spr: 'ptera', flip: true, hp: 384, atk: 60, def: 15, spd: 32, exp: 240, coins: [30, 55], drops: [['fish', .4]] },
+      { name: '야생 스피노',      spr: 'spino', flip: true, hp: 480, atk: 66, def: 22, spd: 18, exp: 264, coins: [35, 60], drops: [['meat', .4]] },
+    ],
+    boss: { name: '고대 수호룡', spr: 'brachio', flip: true, hp: 1200, atk: 70, def: 35, spd: 20, exp: 2200, coins: [800, 1000], drops: [['potion', 1], ['cake', 1]] } },
+};
+const BOSS_GAUGE = 5; // 일반 몬스터 5마리 잡으면 보스 등장
+
 const SHOP = [
-  { id: 'fish',  price: 6 }, { id: 'fruit', price: 6 }, { id: 'cake', price: 30 },
+  { id: 'potion', price: 15 }, { id: 'fish', price: 6 }, { id: 'fruit', price: 6 }, { id: 'cake', price: 30 },
   { id: 'honey', price: 20 }, { id: 'med', price: 20 },
 ];
 
@@ -203,15 +277,17 @@ const PALETTES = {
 
 // 💎 영자 상점
 const GEM_SHOP = [
-  { id: 'heal',    icon: '✨', name: '만능 회복',     sub: '모든 수치 100 · 병 치료', gems: 3 },
+  { id: 'heal',    icon: '✨', name: '만능 회복',     sub: '모든 수치·HP 100% · 병 치료', gems: 3 },
   { id: 'return',  icon: '🏃', name: '탐험 즉시 귀환', sub: '탐험 중일 때 바로 돌아와요', gems: 3 },
   { id: 'coins',   icon: '🪙', name: '코인 50개',      sub: '일반 코인으로 교환', gems: 1 },
+  { id: 'exp',     icon: '📗', name: '경험치 물약',    sub: '다음 레벨까지 필요한 경험치의 50%', gems: 5 },
   { id: 'revive',  icon: '👼', name: '부활권',         sub: '떠난 공룡을 되살려요 (가방에 보관)', gems: 10 },
   { id: 'fixType', icon: '🧬', name: '진화 확정권',    sub: '어른이 될 종류를 직접 골라요', gems: 15 },
 ];
 
 /* =========================================================
-   스프라이트 (# = 잉크, o = 눈(잘 땐 감김), 오른쪽을 봄)
+   스프라이트 (# = 잉크, o = 눈(잘 땐 감김))
+   공룡은 오른쪽, 몬스터는 왼쪽을 봄
    ========================================================= */
 const SPR = {
   egg: [
@@ -264,6 +340,24 @@ const SPR = {
     "...#.#.#..#.#.#.","...#..#....#..#.","...#.#.#..#.#.#.","...#........#...",
     "...#...####.#...","...#.........#..","...#..........#.","...#.#.##.#.##..",
     "...##.#..#.#....","................","................","................"],
+  // 몬스터 (왼쪽을 봄)
+  fly: [
+    "...##..##...","..###..###..","..###..###..","#.##########","############","..##..##....","............"],
+  bug: [
+    "....####....","..########..",".##########.","#.##########","############",".#.#.##.#.#.","#..#.#..#..#"],
+  rat: [
+    ".#........",".##.......","#.######..","##########",".#######.#","..#..#...#"],
+  lizard: [
+    ".####.........","#.#####.....##","###########.#.",".############.","..#..#..#..#.."],
+  croc: [
+    ".#######...#.#..","#.##############","################",".#...#....#..#..","##..##...##.##.."],
+  frog: [
+    "..##..##....",".#.##.#.#...",".########...","#########...","##########..",".########...","..######....",".##.#.##.#..","##..#..##.#."],
+  turtle: [
+    ".....#####....","...#########..","..###########.",".##.#########.","#############.","#.###########.","..##.....##...","..##.....##..."],
+  ankylo: [
+    "....#.#.#.#.....","...##########...","..############..",".#.###########.#","################","#.############.#","..##..##..##....","..##..##..##...."],
+  // 아이콘
   poop:   [".#...","..#..",".###.","#####"],
   z:      ["####","..#.",".#..","####"],
   skull:  [".###.","#.#.#","#####",".###.",".#.#."],
@@ -273,6 +367,18 @@ const SPR = {
   rock:   [".##.","####","####"],
   grass:  ["#.#",".#."],
   flag:   ["###.","####","#...","#...","#..."],
+  crown:  ["#.#.#","#####"],
+  star:   [".#.","###",".#."],
+  sword:  ["..#","##.",".#."],
+};
+
+// 3x5 픽셀 숫자 (데미지 표시)
+const DIG = {
+  0: ["###","#.#","#.#","#.#","###"], 1: [".#.","##.",".#.",".#.","###"], 2: ["###","..#","###","#..","###"],
+  3: ["###","..#","###","..#","###"], 4: ["#.#","#.#","###","..#","..#"], 5: ["###","#..","###","..#","###"],
+  6: ["###","#..","###","#.#","###"], 7: ["###","..#","..#",".#.",".#."], 8: ["###","#.#","###","#.#","###"],
+  9: ["###","#.#","###","..#","###"], '!': [".#.",".#.",".#.","...",".#."], '+': ["...",".#.","###",".#.","..."],
+  M: ["#.#","###","#.#","#.#","#.#"], I: ["###",".#.",".#.",".#.","###"], S: ["###","#..","###","..#","###"],
 };
 
 /* =========================================================
@@ -283,21 +389,36 @@ const $ = id => document.getElementById(id);
 const clamp = v => Math.max(0, Math.min(100, v));
 const rand = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 function newPet(name) {
   const now = Date.now();
-  return {
-    v: 1, name, born: now, last: now, ageMin: 0,
+  const s = {
+    v: 2, name, born: now, last: now, ageMin: 0, stage: 'egg', lv: 1, exp: 0, hp: 0,
     hunger: 80, happy: 80, energy: 100, clean: 100, health: 100,
     str: 0, spd: 0, int: 0, meat: 0, plant: 0, type: null,
     sleeping: false, sick: false, poops: 0, dead: false,
-    coins: 20, inv: { med: 1 }, explore: null, hi: 0,
+    coins: 20, inv: { med: 1, potion: 2 }, explore: null, hi: 0,
     palette: 'classic', palettes: ['classic'], lastPet: 0,
+    bossGauge: {}, bossKills: {}, kills: 0,
   };
+  s.hp = stats(s).maxHp;
+  return s;
+}
+function migrate(s) {
+  if (!s) return s;
+  if (s.lv === undefined) { // v1 → v2: 시간 기반 성장에서 레벨 기반으로
+    s.stage = s.ageMin < 1 ? 'egg' : s.ageMin < 60 ? 'baby' : s.ageMin < 1440 ? 'child' : 'adult';
+    s.lv = { egg: 1, baby: 1, child: 5, adult: 12 }[s.stage];
+    s.exp = 0; s.bossGauge = {}; s.bossKills = {}; s.kills = 0;
+    s.inv = s.inv || {}; s.inv.potion = (s.inv.potion || 0) + 2;
+    s.hp = stats(s).maxHp;
+  }
+  return s;
 }
 function save() { if (S) { S.last = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } }
-function load() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; } }
-function loadDex() { try { return JSON.parse(localStorage.getItem(DEX_KEY)) || { dinos: {}, fossils: {} }; } catch { return { dinos: {}, fossils: {} }; } }
+function load() { try { return migrate(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch { return null; } }
+function loadDex() { try { return Object.assign({ dinos: {}, fossils: {}, ults: {}, bosses: {} }, JSON.parse(localStorage.getItem(DEX_KEY)) || {}); } catch { return { dinos: {}, fossils: {}, ults: {}, bosses: {} }; } }
 function saveDex() { localStorage.setItem(DEX_KEY, JSON.stringify(DEX)); }
 let DEX = loadDex();
 
@@ -344,14 +465,83 @@ async function giftPrompt() {
   alert(r.msg); after();
 }
 
-const stageOf = s => STAGES.find(st => s.ageMin < st.until);
-const spriteKey = s => s.dead ? 'ghost' : (stageOf(s).id === 'adult' ? s.type : stageOf(s).id);
-
+/* ---------- 단계 / 능력치 ---------- */
+const stageOf = s => STAGES[STAGE_IDX[s.stage] ?? 0];
+const spriteKey = s => s.dead ? 'ghost' : (s.stage === 'adult' || s.stage === 'ultimate') ? s.type : s.stage;
+function displayName(s) {
+  if (s.stage === 'adult') return DINOS[s.type].name;
+  if (s.stage === 'ultimate') return DINOS[s.type].ult;
+  return stageOf(s).name;
+}
 function decideType(s) {
   if (s.fixedType) return s.fixedType;
   const diet = s.meat >= s.plant ? 'meat' : 'plant';
   const top = ['str', 'spd', 'int'].reduce((a, b) => (s[b] > s[a] ? b : a), 'int');
   return Object.keys(DINOS).find(k => DINOS[k].diet === diet && DINOS[k].stat === top);
+}
+const expNeed = lv => 10 + 4 * lv * lv;
+
+function stats(s) {
+  const m = STAGE_MULT[s.stage] || 1;
+  const t = (s.stage === 'adult' || s.stage === 'ultimate') ? s.type : null;
+  const st = {
+    maxHp: Math.round((40 + s.lv * 9 + s.str * 2) * m),
+    atk:   Math.round((6 + s.lv * 2 + s.str * 0.8) * m),
+    def:   Math.round((2 + s.lv * 1.1 + s.int * 0.3) * m),
+    spd:   Math.round(5 + s.lv + s.spd * 0.8),
+    crit:  Math.min(35, 5 + s.int * 0.5),
+  };
+  if (t === 'trex') st.atk = Math.round(st.atk * 1.15);
+  if (t === 'raptor') st.spd = Math.round(st.spd * 1.3);
+  if (t === 'tri') st.def = Math.round(st.def * 1.3);
+  if (t === 'ptera') st.crit += 10;
+  if (t === 'brachio') st.maxHp = Math.round(st.maxHp * 1.25);
+  return st;
+}
+function skillOf(s) {
+  if (s.stage === 'baby' || s.stage === 'egg') return { name: '박치기', mult: 1.6 };
+  if (s.stage === 'child') return { name: '꼬리 휘두르기', mult: 1.8 };
+  const base = {
+    trex:    { name: '폭군의 이빨', mult: 2.4 },
+    raptor:  { name: '연속 할퀴기', mult: 1.3, hits: 2 },
+    spino:   { name: '물대포',     mult: 2.2, heal: 0.15 },
+    tri:     { name: '뿔 돌진',    mult: 2.0, pierce: true },
+    ptera:   { name: '급강하',     mult: 1.8, crit: true },
+    brachio: { name: '대지 진동',  mult: 2.0, stun: true },
+  }[s.type];
+  const k = { ...base };
+  if (s.stage === 'ultimate') { k.name = '궁극 ' + k.name; k.mult *= 1.3; }
+  return k;
+}
+
+/* ---------- 경험치 / 레벨업 / 진화 ---------- */
+let evo = null; // 진화 연출
+function gainExp(s, amount) {
+  if (s.lv >= MAX_LV) return;
+  s.exp += Math.round(amount);
+  let ups = 0;
+  while (s.lv < MAX_LV && s.exp >= expNeed(s.lv)) {
+    s.exp -= expNeed(s.lv); s.lv++; ups++;
+  }
+  if (ups) {
+    s.hp = stats(s).maxHp;
+    toast(`⬆️ LEVEL UP!\nLv.${s.lv}`);
+    checkEvolve(s);
+  }
+}
+function checkEvolve(s) {
+  for (;;) {
+    const next = STAGES[STAGE_IDX[s.stage] + 1];
+    if (!next || !next.lv || s.lv < next.lv || s.stage === 'egg') break;
+    const fromKey = spriteKey(s);
+    s.stage = next.id;
+    if (next.id === 'adult') { s.type = decideType(s); DEX.dinos[s.type] = true; saveDex(); }
+    if (next.id === 'ultimate') { DEX.ults[s.type] = true; saveDex(); }
+    s.hp = stats(s).maxHp;
+    evo = { fromKey, toKey: spriteKey(s), until: Date.now() + 2600 };
+    setTimeout(() => toast(`✨ 진화! ✨\n${displayName(s)}`), 2600);
+    events.push(`✨ ${displayName(s)}(으)로 진화했어요!`);
+  }
 }
 
 /* =========================================================
@@ -360,20 +550,11 @@ function decideType(s) {
 let events = [];
 function step(s) {
   if (s.dead) return;
-  const before = stageOf(s).id;
   s.ageMin += 1;
-  const after = stageOf(s).id;
-
-  if (before !== after) {
-    if (after === 'baby') events.push('🐣 알이 깨어났어요!');
-    if (after === 'child') events.push('✨ 꼬마 공룡으로 자랐어요!');
-    if (after === 'adult') {
-      s.type = decideType(s);
-      DEX.dinos[s.type] = true; saveDex();
-      events.push(`🎉 ${DINOS[s.type].name}(으)로 진화했어요!`);
-    }
+  if (s.stage === 'egg') {
+    if (s.ageMin >= 1) { s.stage = 'baby'; s.hp = stats(s).maxHp; events.push('🐣 알이 깨어났어요!'); }
+    return;
   }
-  if (after === 'egg') return;
 
   if (s.explore) {
     s.hunger -= RATE.hunger; s.energy -= RATE.energy * 0.5;
@@ -387,7 +568,11 @@ function step(s) {
     s.happy  -= RATE.happy;
     s.energy -= RATE.energy;
     if (Math.random() < 1 / 45) s.poops = Math.min(4, s.poops + 1);
-    if (s.energy <= 0) { s.sleeping = true; events.push('😪 지쳐서 잠들었어요…'); }
+    if (s.energy <= 0 && !battle) { s.sleeping = true; events.push('😪 지쳐서 잠들었어요…'); }
+  }
+  if (!battle) {
+    const mx = stats(s).maxHp;
+    s.hp = Math.min(mx, s.hp + mx * (s.sleeping ? 0.05 : 0.01));
   }
   s.clean -= s.poops * 0.8;
 
@@ -398,7 +583,10 @@ function step(s) {
   clampAll(s);
   if (s.health <= 0) s.dead = true;
 }
-function clampAll(s) { for (const k of ['hunger', 'happy', 'energy', 'clean', 'health']) s[k] = clamp(s[k]); }
+function clampAll(s) {
+  for (const k of ['hunger', 'happy', 'energy', 'clean', 'health']) s[k] = clamp(s[k]);
+  s.hp = Math.max(0, Math.min(stats(s).maxHp, s.hp));
+}
 
 function finishExplore(s) {
   const L = LOCS[s.explore.loc];
@@ -414,8 +602,10 @@ function finishExplore(s) {
   }
   s[L.gain] += 1;
   s.happy += 10;
+  got.push(`EXP+${L.exp}`);
   events.push(`${L.icon} ${L.name} 탐험 완료! ${got.join(' ')}`);
   s.explore = null;
+  gainExp(s, L.exp);
 }
 
 /* =========================================================
@@ -435,18 +625,22 @@ function tickTime() {
   let stepped = false;
   while (acc >= 60000) { step(S); acc -= 60000; stepped = true; }
   if (stepped) { flushEvents(); save(); renderUI(); }
-  if (S.dead) showDead();
+  if (S.dead) { if (battle) endBattle(); showDead(); }
 }
 function flushEvents() { if (events.length) { say(events[events.length - 1]); events = []; } }
 
 /* =========================================================
-   메시지 / 시트
+   메시지 / 시트 / 토스트
    ========================================================= */
 let effect = null;
 function say(t, spr) {
   $('msg').textContent = t;
   if (spr) effect = { spr, until: Date.now() + 1500 };
   clearTimeout(say.t); say.t = setTimeout(() => $('msg').textContent = '', 3500);
+}
+function toast(t) {
+  const el = $('toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1800);
 }
 function after() { if (S) { clampAll(S); save(); } renderUI(); }
 
@@ -469,7 +663,8 @@ $('sheet').onclick = e => { if (e.target.id === 'sheet') closeSheet(); };
 function blocked(opts = {}) {
   if (!S || S.dead) return '...';
   if (game) return '게임 중이에요';
-  if (stageOf(S).id === 'egg') return '아직 알이에요… 곧 깨어나요!';
+  if (battle) return '사냥 중이에요';
+  if (S.stage === 'egg') return '아직 알이에요… 곧 깨어나요!';
   if (S.explore && !opts.allowExplore) return `${LOCS[S.explore.loc].name} 탐험 중이에요 🗺️`;
   if (S.sleeping && !opts.allowSleep) return '쿨쿨 자고 있어요 😴';
   return null;
@@ -484,6 +679,7 @@ function eat(id, fromBag) {
   if (S.hunger >= 95 && it.hunger) { S.happy -= 5; return say('배불러요! 그만 줘요 😣'); }
   if (fromBag) { S.inv[id]--; if (!S.inv[id]) delete S.inv[id]; }
   S.hunger += it.hunger || 0; S.happy += it.happy || 0; S.energy += it.energy || 0;
+  if (it.kind === 'food') S.hp += stats(S).maxHp * FOOD_HEAL;
   if (it.diet === 'meat') S.meat++;
   if (it.diet === 'plant') S.plant++;
   say(`${it.icon} 냠냠! 맛있어요`, 'heart');
@@ -493,8 +689,8 @@ const ACTIONS = {
   feed() {
     if (!guard()) return;
     const rows = [
-      { icon: '🍖', label: '고기', sub: '기본 먹이 · 육식 성향 ↑', fn: () => eat('meat') },
-      { icon: '🌿', label: '풀잎', sub: '기본 먹이 · 초식 성향 ↑', fn: () => eat('leaf') },
+      { icon: '🍖', label: '고기', sub: '기본 먹이 · HP 회복 · 육식 성향 ↑', fn: () => eat('meat') },
+      { icon: '🌿', label: '풀잎', sub: '기본 먹이 · HP 회복 · 초식 성향 ↑', fn: () => eat('leaf') },
     ];
     for (const [id, n] of Object.entries(S.inv)) {
       const it = ITEMS[id];
@@ -511,38 +707,61 @@ const ACTIONS = {
   sleep() {
     if (!guard({ allowSleep: true })) return;
     S.sleeping = !S.sleeping;
-    say(S.sleeping ? '잘 자~ 💤' : '일어났어요! ☀️');
+    say(S.sleeping ? '잘 자~ 💤 (HP·기력 회복)' : '일어났어요! ☀️');
   },
   play() {
     if (!guard()) return;
     openSheet('🎮 놀기', [
-      { icon: '🦖', label: '점프 게임', sub: `장애물을 뛰어넘어요 · 체력 -10 · 최고 ${S.hi}점`, disabled: S.energy < 10, fn: startGame },
+      { icon: '🦖', label: '점프 게임', sub: `장애물을 뛰어넘어요 · 기력 -10 · 최고 ${S.hi}점`, disabled: S.energy < 10, fn: startGame },
       { icon: '🤚', label: '쓰다듬기', sub: '행복 +8', fn: petting },
       { icon: '🎵', label: '노래 불러주기', sub: '행복 +5 · 지능 조금 ↑', fn: () => { S.happy += 5; if (Math.random() < .3) S.int++; say('🎵 따라 흥얼거려요~', 'note'); } },
     ]);
   },
+  hunt() {
+    if (!guard()) return;
+    const st = stats(S);
+    const rows = Object.entries(ZONES).map(([id, Z]) => {
+      const locked = S.lv < Z.lv;
+      const g = S.bossGauge[id] || 0;
+      return {
+        icon: Z.icon, label: Z.name, disabled: locked || S.energy < 5 || S.hp < 1,
+        sub: locked ? `🔒 Lv.${Z.lv}부터` : `몬스터 ${Z.mobs.map(m => m.name).join('·')} · 보스 게이지 ${Math.min(g, BOSS_GAUGE)}/${BOSS_GAUGE}`,
+        right: locked ? '' : `Lv.${Z.lv}+`, fn: () => startBattle(id, false),
+      };
+    });
+    for (const [id, Z] of Object.entries(ZONES)) {
+      if ((S.bossGauge[id] || 0) >= BOSS_GAUGE && S.lv >= Z.lv)
+        rows.unshift({ icon: '👑', label: `보스 도전: ${Z.boss.name}`, sub: `${Z.name}의 지배자 · HP ${Z.boss.hp} · 공격 ${Z.boss.atk}`,
+          right: S.bossKills[id] ? `처치 ${S.bossKills[id]}회` : 'NEW', disabled: S.energy < 5 || S.hp < 1, fn: () => startBattle(id, true) });
+    }
+    openSheet('⚔️ 사냥터', rows, {
+      right: `HP ${Math.ceil(S.hp)}/${st.maxHp}`,
+      html: `<div class="note">사냥 1회: 기력 -5 · 배부름 -3\n공격 ${st.atk} · 방어 ${st.def} · 속도 ${st.spd} · 치명 ${Math.round(st.crit)}%${S.hp < st.maxHp * 0.3 ? '\n⚠️ HP가 낮아요! 먹이나 잠으로 회복하세요' : ''}</div>`,
+    });
+  },
   explore() {
     if (!guard()) return;
-    const st = STAGE_IDX[stageOf(S).id];
+    const st = STAGE_IDX[S.stage];
     openSheet('🗺️ 탐험 보내기', Object.entries(LOCS).map(([id, L]) => {
       const locked = st < STAGE_IDX[L.need];
       return {
         icon: L.icon, label: L.name, disabled: locked || S.energy < L.energy,
-        sub: locked ? `🔒 ${STAGES[STAGE_IDX[L.need]].name}부터` : `${L.min}분 · 체력 -${L.energy} · ${TRAINS[L.gain].name} ↑ · 화석 발견 가능`,
+        sub: locked ? `🔒 ${STAGES[STAGE_IDX[L.need]].name}부터` : `${L.min}분 · 기력 -${L.energy} · EXP +${L.exp} · ${TRAINS[L.gain].name} ↑ · 화석`,
         fn: () => { S.energy -= L.energy; S.explore = { loc: id, left: L.min }; S.poops = 0; say(`${L.icon} ${L.name}(으)로 떠났어요! ${L.min}분 뒤 돌아와요`); },
       };
-    }), { html: '<div class="note">탐험 중에는 다른 행동을 못 해요. 돌아오면 코인·아이템·화석을 가져와요.</div>' });
+    }), { html: '<div class="note">탐험 중에는 다른 행동을 못 해요. 돌아오면 코인·아이템·화석·경험치를 가져와요.</div>' });
   },
   train() {
     if (!guard()) return;
     openSheet('💪 훈련', Object.entries(TRAINS).map(([k, t]) => ({
-      icon: t.icon, label: `${t.name} 훈련`, sub: `${t.act} · 체력 -15 · 배부름 -5`, right: `Lv.${S[k]}`, disabled: S.energy < 15,
+      icon: t.icon, label: `${t.name} 훈련`, sub: `${t.act} · ${t.desc} ↑ · 기력 -15 · EXP +5`, right: `Lv.${S[k]}`, disabled: S.energy < 15,
       fn: () => {
         S.energy -= 15; S.hunger -= 5;
         const g = Math.random() < 0.2 ? 3 : 2; S[k] += g;
         say(`${t.icon} ${t.act}! ${t.name} +${g}${g === 3 ? ' (대성공!)' : ''}`);
+        gainExp(S, 5);
       },
-    })), { html: stageOf(S).id !== 'adult' ? '<div class="note">어른이 될 때 가장 높은 능력치와 식성으로 공룡 종류가 정해져요.</div>' : '' });
+    })), { html: S.stage !== 'adult' && S.stage !== 'ultimate' ? '<div class="note">Lv.12에 어른이 될 때, 가장 높은 능력치와 식성으로 공룡 종류가 정해져요.</div>' : '' });
   },
   bag() {
     if (!guard({ allowExplore: true, allowSleep: true })) return;
@@ -550,7 +769,7 @@ const ACTIONS = {
       const it = ITEMS[id];
       return { icon: it.icon, label: it.name, sub: effectText(it), right: `x${n}`, fn: () => useItem(id) };
     });
-    openSheet('🎒 가방', rows, { right: `🪙 ${S.coins}`, html: rows.length ? '' : '<div class="note">가방이 비어 있어요. 탐험이나 상점에서 구해보세요.</div>' });
+    openSheet('🎒 가방', rows, { right: `🪙 ${S.coins}`, html: rows.length ? '' : '<div class="note">가방이 비어 있어요. 사냥·탐험·상점에서 구해보세요.</div>' });
   },
   shop() {
     if (!guard({ allowExplore: true, allowSleep: true })) return;
@@ -570,14 +789,15 @@ const ACTIONS = {
   menu() {
     if (!S) return;
     openSheet('📖 메뉴', [
-      { icon: '📋', label: '상태 보기', sub: '나이, 능력치, 진화 정보', keep: true, fn: showInfo },
-      { icon: '🦕', label: '공룡 도감', sub: `${Object.keys(DEX.dinos).length} / ${Object.keys(DINOS).length}종`, keep: true, fn: showDinoDex },
+      { icon: '📋', label: '상태 보기', sub: '레벨, 전투 능력치, 진화 정보', keep: true, fn: showInfo },
+      { icon: '🦕', label: '공룡 도감', sub: `${Object.keys(DEX.dinos).length + Object.keys(DEX.ults).length} / ${Object.keys(DINOS).length * 2}종`, keep: true, fn: showDinoDex },
       { icon: '🦴', label: '화석 도감', sub: `${Object.keys(DEX.fossils).length} / ${Object.keys(FOSSILS).length}개`, keep: true, fn: showFossilDex },
+      { icon: '👑', label: '보스 도감', sub: `${Object.keys(DEX.bosses).length} / ${Object.keys(ZONES).length}마리`, keep: true, fn: showBossDex },
       { icon: '🎨', label: '화면 테마', sub: PALETTES[S.palette].name, keep: true, fn: showPalettes },
       { icon: '🎁', label: '선물 코드 입력', sub: '운영자에게 받은 영자코인 코드', fn: giftPrompt },
       { icon: '🆔', label: `내 ID: ${PID}`, sub: '눌러서 복사 · 선물 받을 때 알려주세요', keep: true,
         fn: () => { navigator.clipboard?.writeText(PID).then(() => say('ID를 복사했어요 📋'), () => say(`내 ID: ${PID}`)); } },
-      { icon: '🔄', label: '처음부터 다시', sub: '지금 공룡과 헤어져요 (도감은 유지)', keep: true, fn: confirmReset },
+      { icon: '🔄', label: '처음부터 다시', sub: '지금 공룡과 헤어져요 (도감·영자코인은 유지)', keep: true, fn: confirmReset },
     ]);
   },
 };
@@ -591,7 +811,7 @@ function gemShop() {
   const rows = GEM_SHOP.map(g => {
     let disabled = WALLET.gems < g.gems, sub = g.sub;
     if (g.id === 'return' && !S.explore) { disabled = true; sub = '탐험 중일 때만 쓸 수 있어요'; }
-    if (g.id === 'fixType' && stageOf(S).id === 'adult') { disabled = true; sub = '이미 어른이에요'; }
+    if (g.id === 'fixType' && (S.stage === 'adult' || S.stage === 'ultimate')) { disabled = true; sub = '이미 어른이에요'; }
     if (g.id === 'fixType' && S.fixedType) sub = `확정됨: ${DINOS[S.fixedType].name}`;
     if (g.id === 'revive') sub += ` · 보유 ${WALLET.revive || 0}개`;
     return { icon: g.icon, label: g.name, sub, right: `💎${g.gems}`, disabled, keep: true, fn: () => buyGem(g) };
@@ -609,12 +829,14 @@ function buyGem(g) {
   if (g.id === 'fixType') return chooseFixType(g);
   if (!spendGems(g.gems)) return;
   if (g.id === 'heal') {
-    Object.assign(S, { hunger: 100, happy: 100, energy: 100, clean: 100, health: 100, sick: false, poops: 0 });
+    Object.assign(S, { hunger: 100, happy: 100, energy: 100, clean: 100, health: 100, sick: false, poops: 0, hp: stats(S).maxHp });
     say('✨ 완전히 회복했어요!', 'heart');
   } else if (g.id === 'return') {
     finishExplore(S); flushEvents();
   } else if (g.id === 'coins') {
     S.coins += 50; say('🪙 코인 50개를 받았어요');
+  } else if (g.id === 'exp') {
+    const amt = Math.ceil(expNeed(S.lv) * 0.5); say(`📗 경험치 +${amt}`); gainExp(S, amt);
   } else if (g.id === 'revive') {
     WALLET.revive = (WALLET.revive || 0) + 1; saveWallet(); say('👼 부활권을 보관했어요');
   }
@@ -622,7 +844,7 @@ function buyGem(g) {
 }
 function chooseFixType(g) {
   openSheet('🧬 어떤 공룡으로 키울까요?', Object.entries(DINOS).map(([k, d]) => ({
-    icon: '🦖', label: d.name, sub: `원래 조건: ${d.hint}`, right: `💎${g.gems}`, keep: true,
+    icon: '🦖', label: d.name, sub: `원래 조건: ${d.hint} · ${d.bonus}`, right: `💎${g.gems}`, keep: true,
     fn: () => { if (!spendGems(g.gems)) return; S.fixedType = k; say(`🧬 ${d.name}(으)로 자라도록 확정했어요!`); after(); gemShop(); },
   })).concat([{ icon: '←', label: '뒤로', keep: true, fn: gemShop }]));
 }
@@ -633,6 +855,7 @@ function revive() {
   } else WALLET.revive--;
   saveWallet();
   Object.assign(S, { dead: false, hunger: 70, happy: 70, energy: 70, clean: 100, health: 60, sick: false, poops: 0, sleeping: false, explore: null });
+  S.hp = stats(S).maxHp * 0.6;
   $('ovDead').classList.remove('show');
   lastReal = Date.now(); acc = 0;
   say('👼 다시 돌아왔어요!'); after();
@@ -642,7 +865,9 @@ function effectText(it) {
   const t = [];
   if (it.hunger) t.push(`배부름 +${it.hunger}`);
   if (it.happy) t.push(`행복 +${it.happy}`);
-  if (it.energy) t.push(`체력 +${it.energy}`);
+  if (it.energy) t.push(`기력 +${it.energy}`);
+  if (it.kind === 'food') t.push('HP 15%');
+  if (it.heal) t.push(`HP ${it.heal * 100}% 회복`);
   if (it.diet) t.push(it.diet === 'meat' ? '육식' : '초식');
   if (it.kind === 'med') t.push('병을 고쳐요');
   return t.join(' · ');
@@ -656,6 +881,12 @@ function useItem(id) {
     S.inv[id]--; if (!S.inv[id]) delete S.inv[id];
     S.sick = false; S.health += 15; return say('💊 다 나았어요!');
   }
+  if (it.kind === 'potion') {
+    const mx = stats(S).maxHp;
+    if (S.hp >= mx) return say('HP가 이미 가득해요');
+    S.inv[id]--; if (!S.inv[id]) delete S.inv[id];
+    S.hp += mx * it.heal; return say('🧪 HP를 회복했어요!');
+  }
   eat(id, true);
 }
 function petting() {
@@ -665,36 +896,45 @@ function petting() {
 
 /* ---------- 메뉴 하위 화면 ---------- */
 function showInfo() {
-  const st = stageOf(S), d = Math.floor(S.ageMin / 1440), h = Math.floor(S.ageMin % 1440 / 60), m = Math.floor(S.ageMin % 60);
-  let evo = '';
-  if (st.id === 'adult') evo = `종류: ${DINOS[S.type].name}`;
-  else {
-    const guess = DINOS[decideType(S)];
-    const next = STAGES[STAGE_IDX[st.id] + 1];
-    const left = st.until - S.ageMin;
-    evo = `다음 단계: ${next.name} (${Math.floor(left / 60)}시간 ${Math.floor(left % 60)}분 남음)\n지금대로 크면 → ${guess.name}?`;
-  }
+  const st = stats(S), d = Math.floor(S.ageMin / 1440), h = Math.floor(S.ageMin % 1440 / 60);
+  const next = STAGES[STAGE_IDX[S.stage] + 1];
+  let evoText = '';
+  if (S.stage === 'adult' || S.stage === 'ultimate') evoText = `종류: ${DINOS[S.type].name} (${DINOS[S.type].bonus})`;
+  if (next && next.lv) {
+    evoText += `${evoText ? '\n' : ''}다음 진화: Lv.${next.lv}에 ${next.id === 'ultimate' ? DINOS[S.type].ult : next.name}`;
+    if (next.id === 'adult' || next.id === 'child') evoText += `\n지금대로 크면 → ${DINOS[decideType(S)].name}?`;
+  } else if (S.stage === 'ultimate') evoText += '\n최종 진화 완료! 👑';
+  const sk = skillOf(S);
   openSheet('📋 상태', [{ icon: '←', label: '뒤로', keep: true, fn: ACTIONS.menu }], {
-    html: `<div class="note">${S.name} · ${st.name}
-나이: ${d}일 ${h}시간 ${m}분
-${evo}
+    html: `<div class="note">${S.name} · ${displayName(S)} · Lv.${S.lv}
+EXP ${S.exp} / ${expNeed(S.lv)} · 나이 ${d}일 ${h}시간
+${evoText}
 
+❤️ HP ${Math.ceil(S.hp)}/${st.maxHp}   ⚔️ 공격 ${st.atk}   🛡️ 방어 ${st.def}
+⚡ 속도 ${st.spd}   🎯 치명 ${Math.round(st.crit)}%
+💥 필살기: ${sk.name}
 💪 힘 ${S.str}   ⚡ 속도 ${S.spd}   🧠 지능 ${S.int}
 식성: 🍖 고기 ${S.meat}회 / 🌿 풀 ${S.plant}회
-건강 ${Math.round(S.health)}${S.sick ? ' (아픔 🤒)' : ''}
-🪙 ${S.coins} · 점프 게임 최고 ${S.hi}점
+처치 ${S.kills || 0}마리 · 🪙 ${S.coins} · 점프 최고 ${S.hi}점
 ${SPEED !== 1 ? `\n⏩ 테스트 배속 x${SPEED}` : ''}</div>`,
   });
 }
 function showDinoDex() {
-  const cells = Object.entries(DINOS).map(([k, d]) =>
-    `<div class="cell ${DEX.dinos[k] ? '' : 'no'}"><div>${DEX.dinos[k] ? '🦖' : '❔'}</div>${DEX.dinos[k] ? d.name : '???'}<br><small>${d.hint}</small></div>`).join('');
-  openSheet('🦕 공룡 도감', [{ icon: '←', label: '뒤로', keep: true, fn: ACTIONS.menu }], { html: `<div class="grid">${cells}</div>` });
+  const cells = Object.entries(DINOS).flatMap(([k, d]) => [
+    `<div class="cell ${DEX.dinos[k] ? '' : 'no'}"><div>${DEX.dinos[k] ? '🦖' : '❔'}</div>${DEX.dinos[k] ? d.name : '???'}<br><small>${d.hint}</small></div>`,
+    `<div class="cell ${DEX.ults[k] ? '' : 'no'}"><div>${DEX.ults[k] ? '👑' : '❔'}</div>${DEX.ults[k] ? d.ult : '???'}<br><small>Lv.25 궁극진화</small></div>`,
+  ]).join('');
+  openSheet('🦕 공룡 도감', [{ icon: '←', label: '뒤로', keep: true, fn: ACTIONS.menu }], { html: `<div class="grid" style="grid-template-columns:1fr 1fr">${cells}</div>` });
 }
 function showFossilDex() {
   const cells = Object.entries(FOSSILS).map(([k, f]) =>
     `<div class="cell ${DEX.fossils[k] ? '' : 'no'}"><div>${DEX.fossils[k] ? f.icon : '❔'}</div>${DEX.fossils[k] ? `${f.name}<br><small>x${DEX.fossils[k]}</small>` : '???'}</div>`).join('');
   openSheet('🦴 화석 도감', [{ icon: '←', label: '뒤로', keep: true, fn: ACTIONS.menu }], { html: `<div class="grid">${cells}</div>` });
+}
+function showBossDex() {
+  const cells = Object.entries(ZONES).map(([k, Z]) =>
+    `<div class="cell ${DEX.bosses[k] ? '' : 'no'}"><div>${DEX.bosses[k] ? '👑' : '❔'}</div>${DEX.bosses[k] ? Z.boss.name : '???'}<br><small>${Z.name}</small></div>`).join('');
+  openSheet('👑 보스 도감', [{ icon: '←', label: '뒤로', keep: true, fn: ACTIONS.menu }], { html: `<div class="grid" style="grid-template-columns:1fr 1fr">${cells}</div>` });
 }
 function showPalettes() {
   openSheet('🎨 화면 테마', S.palettes.map(id => ({
@@ -711,6 +951,198 @@ function confirmReset() {
 }
 
 document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { ACTIONS[b.dataset.act](); after(); });
+
+/* =========================================================
+   ⚔️ 사냥 (턴제 전투)
+   ========================================================= */
+let battle = null;
+function startBattle(zoneId, boss) {
+  const Z = ZONES[zoneId];
+  const def = boss ? Z.boss : pick(Z.mobs);
+  // 같은 사냥터 몬스터도 조금씩 강함이 다름
+  const v = boss ? 1 : 0.9 + Math.random() * 0.25;
+  const e = { ...def, maxHp: Math.round(def.hp * v), atk: Math.round(def.atk * v), boss };
+  e.hp = e.maxHp;
+  S.energy -= 5; S.hunger -= 3;
+  battle = { zone: zoneId, e, cd: 0, busy: false, over: false, anim: null, floats: [], stun: false, foeGone: false };
+  $('device').classList.add('fight');
+  renderBattleButtons('fight');
+  say(`${boss ? '👑 보스 ' : ''}${e.name}이(가) 나타났다!`);
+  updateBattleUI();
+  if (e.spd > stats(S).spd + 5) {
+    battle.busy = true; renderBattleButtons('fight');
+    setTimeout(async () => { say(`${e.name}이(가) 먼저 덤벼들었다!`); await enemyTurn(); }, 700);
+  }
+}
+function renderBattleButtons(mode) {
+  const box = $('btBtns');
+  if (mode === 'fight') {
+    box.className = 'bt-btns';
+    const sk = skillOf(S);
+    box.innerHTML = `<button id="bbAtk">⚔️<br>공격</button><button id="bbSkill">💥<br>${battle.cd ? `${battle.cd}턴` : '필살기'}</button><button id="bbItem">🧪<br>아이템</button><button id="bbRun">🏃<br>도망</button>`;
+    $('bbAtk').onclick = () => playerAct('atk');
+    $('bbSkill').onclick = () => playerAct('skill');
+    $('bbItem').onclick = battleItem;
+    $('bbRun').onclick = () => playerAct('run');
+    box.querySelectorAll('button').forEach(b => b.disabled = battle.busy);
+    if (battle.cd) $('bbSkill').disabled = true;
+    $('bbSkill').title = sk.name;
+  } else {
+    box.className = 'bt-btns two';
+    const canGo = mode === 'win' && S.energy >= 5 && S.hp > 0;
+    box.innerHTML = `<button id="bbAgain" ${canGo ? '' : 'disabled'}>⚔️ 계속 사냥</button><button id="bbBack">🏠 돌아가기</button>`;
+    $('bbAgain').onclick = () => { const z = battle.zone; endBattle(); startBattle(z, false); };
+    $('bbBack').onclick = endBattle;
+  }
+}
+function updateBattleUI() {
+  if (!battle) return;
+  const st = stats(S), e = battle.e;
+  $('btMe').textContent = `${S.name} Lv.${S.lv}`;
+  $('btMeHp').style.width = `${(S.hp / st.maxHp) * 100}%`;
+  $('btMeHpT').textContent = `${Math.ceil(S.hp)}/${st.maxHp}`;
+  $('btFoe').textContent = `${e.boss ? '👑' : ''}${e.name}`;
+  $('btFoeHp').style.width = `${Math.max(0, e.hp / e.maxHp) * 100}%`;
+  $('btFoeHpT').textContent = `${Math.max(0, Math.ceil(e.hp))}/${e.maxHp}`;
+  renderUI();
+}
+function calcDmg(atk, def, critChance, pierce) {
+  let d = atk * (0.85 + Math.random() * 0.3) - (pierce ? 0 : def * 0.6);
+  d = Math.max(1, Math.round(d));
+  const crit = Math.random() * 100 < critChance;
+  return { dmg: crit ? Math.round(d * 1.6) : d, crit };
+}
+function addFloat(side, text) {
+  battle.floats.push({ side, text: String(text), t0: Date.now() });
+}
+function anim(who, type, ms = 250) { battle.anim = { who, type, until: Date.now() + ms }; }
+
+async function playerAct(kind) {
+  if (!battle || battle.busy || battle.over) return;
+  const st = stats(S), e = battle.e;
+  battle.busy = true; renderBattleButtons('fight');
+
+  if (kind === 'run') {
+    const chance = Math.max(10, Math.min(90, 50 + (st.spd - e.spd) * 2 - (e.boss ? 25 : 0)));
+    if (Math.random() * 100 < chance) {
+      say('🏃 무사히 도망쳤어요!'); battle.over = true; renderBattleButtons('lose'); updateBattleUI(); return;
+    }
+    say('도망치지 못했어요!');
+    await wait(500);
+    return enemyTurn();
+  }
+
+  if (kind === 'atk') {
+    anim('me', 'lunge'); await wait(150);
+    const { dmg, crit } = calcDmg(st.atk, e.def, st.crit);
+    e.hp -= dmg; anim('foe', 'hit', 300); addFloat('foe', dmg + (crit ? '!' : ''));
+    say(crit ? `💥 치명타! ${dmg} 데미지!` : `⚔️ ${e.name}에게 ${dmg} 데미지`);
+  }
+
+  if (kind === 'skill') {
+    if (battle.cd > 0) { battle.busy = false; renderBattleButtons('fight'); return; }
+    const sk = skillOf(S);
+    const hits = sk.hits || 1;
+    let total = 0;
+    for (let i = 0; i < hits; i++) {
+      anim('me', 'lunge'); await wait(150);
+      const r = calcDmg(st.atk * sk.mult + S.int, e.def, sk.crit ? 100 : st.crit, sk.pierce);
+      e.hp -= r.dmg; total += r.dmg; anim('foe', 'hit', 300); addFloat('foe', r.dmg + (r.crit ? '!' : ''));
+      if (hits > 1) await wait(300);
+    }
+    let extra = '';
+    if (sk.heal) { const h = Math.round(st.maxHp * sk.heal); S.hp += h; addFloat('me', '+' + h); extra = ` · HP +${h}`; }
+    if (sk.stun) { battle.stun = true; extra = ' · 적이 휘청거린다!'; }
+    battle.cd = 3;
+    say(`💥 ${sk.name}! ${total} 데미지${extra}`);
+  }
+  clampAll(S);
+  updateBattleUI();
+  await wait(550);
+  if (e.hp <= 0) return win();
+  return enemyTurn();
+}
+
+async function enemyTurn() {
+  if (!battle || battle.over) return;
+  const st = stats(S), e = battle.e;
+  if (battle.stun) {
+    battle.stun = false; say(`${e.name}은(는) 움직이지 못했다!`);
+  } else {
+    anim('foe', 'lunge'); await wait(150);
+    const dodge = Math.max(3, Math.min(40, (st.spd - e.spd) * 1.5 + 5 + (S.type === 'ptera' && STAGE_IDX[S.stage] >= 3 ? 10 : 0)));
+    if (Math.random() * 100 < dodge) {
+      addFloat('me', 'MISS'); say(`💨 ${e.name}의 공격을 피했다!`);
+    } else {
+      const { dmg, crit } = calcDmg(e.atk, st.def, e.boss ? 10 : 5);
+      S.hp -= dmg; anim('me', 'hit', 300); addFloat('me', dmg + (crit ? '!' : ''));
+      say(`${crit ? '💢 아프다! ' : ''}${e.name}의 공격! ${dmg} 데미지`);
+    }
+  }
+  clampAll(S);
+  updateBattleUI();
+  await wait(450);
+  if (S.hp <= 0) return lose();
+  battle.cd = Math.max(0, battle.cd - 1);
+  battle.busy = false;
+  renderBattleButtons('fight');
+}
+
+function win() {
+  const Z = ZONES[battle.zone], e = battle.e;
+  battle.over = true; battle.foeGone = Date.now();
+  const exp = Math.round(e.exp * (0.9 + Math.random() * 0.2));
+  const coins = rand(...e.coins);
+  S.coins += coins; S.kills = (S.kills || 0) + 1; S.happy += 3;
+  const got = [`EXP +${exp}`, `🪙${coins}`];
+  for (const [it, ch] of e.drops) if (Math.random() < ch) { S.inv[it] = (S.inv[it] || 0) + 1; got.push(ITEMS[it].icon); }
+  if (e.boss) {
+    S.bossGauge[battle.zone] = 0;
+    S.bossKills[battle.zone] = (S.bossKills[battle.zone] || 0) + 1;
+    const first = !DEX.bosses[battle.zone];
+    DEX.bosses[battle.zone] = true; saveDex();
+    if (first) { S.str += 3; S.spd += 3; S.int += 3; got.push('첫 처치 보너스: 모든 능력치 +3'); }
+    toast(`👑 보스 처치!\n${e.name}`);
+  } else {
+    S.bossGauge[battle.zone] = (S.bossGauge[battle.zone] || 0) + 1;
+    if (S.bossGauge[battle.zone] === BOSS_GAUGE) got.push('👑 보스 출현!');
+  }
+  say(`🏆 ${e.name}을(를) 쓰러뜨렸다!\n${got.join(' · ')}`);
+  gainExp(S, exp);
+  clampAll(S); save();
+  updateBattleUI();
+  renderBattleButtons('win');
+}
+function lose() {
+  battle.over = true;
+  S.hp = 1; S.happy -= 15; S.health -= 5;
+  clampAll(S); save();
+  say(`😵 ${S.name}이(가) 기절했어요…\n집에서 푹 쉬고 HP를 회복하세요`);
+  updateBattleUI();
+  renderBattleButtons('lose');
+}
+function endBattle() {
+  battle = null;
+  $('device').classList.remove('fight');
+  after();
+}
+function battleItem() {
+  if (!battle || battle.busy || battle.over) return;
+  const rows = Object.entries(S.inv).filter(([id]) => ['food', 'potion'].includes(ITEMS[id].kind)).map(([id, n]) => {
+    const it = ITEMS[id];
+    const pct = it.kind === 'potion' ? it.heal : FOOD_HEAL;
+    return { icon: it.icon, label: it.name, sub: `HP ${Math.round(pct * 100)}% 회복 (턴 소모)`, right: `x${n}`,
+      fn: async () => {
+        battle.busy = true; renderBattleButtons('fight');
+        S.inv[id]--; if (!S.inv[id]) delete S.inv[id];
+        const h = Math.round(stats(S).maxHp * pct);
+        S.hp += h; if (it.kind === 'food') S.hunger += (it.hunger || 0) * 0.5;
+        clampAll(S); addFloat('me', '+' + h); say(`${it.icon} HP +${h}`);
+        updateBattleUI(); await wait(600); enemyTurn();
+      } };
+  });
+  openSheet('🧪 전투 아이템', rows, { html: rows.length ? '' : '<div class="note">쓸 수 있는 회복 아이템이 없어요. 상점에서 회복약을 사두세요.</div>' });
+}
 
 /* =========================================================
    점프 미니게임
@@ -744,6 +1176,7 @@ function endGame() {
   if (best) S.hi = g.score;
   S.coins += coins; S.happy += Math.min(30, 5 + g.score * 3); S.spd += Math.floor(g.score / 5);
   say(`게임 끝! ${g.score}점 · 🪙+${coins}${best ? ' · 최고 기록! 🏆' : ''}`);
+  gainExp(S, g.score);
   setTimeout(() => { game = null; after(); }, 1200);
   after();
 }
@@ -755,9 +1188,10 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 const W = cv.width, H = cv.height, GROUND = H - 6;
 let petX = 24, dir = 1, frame = 0, hop = 0;
 
+const sprW = spr => Math.max(...spr.map(r => r.length));
 function draw(spr, x, y, ink, { flip = false, closed = false } = {}) {
   ctx.fillStyle = ink;
-  const w = Math.max(...spr.map(r => r.length));
+  const w = sprW(spr);
   spr.forEach((row, j) => {
     for (let i = 0; i < row.length; i++) {
       const c = row[i];
@@ -765,43 +1199,97 @@ function draw(spr, x, y, ink, { flip = false, closed = false } = {}) {
     }
   });
 }
+function drawText(text, x, y, ink) {
+  let cx = x;
+  for (const ch of text) { const g = DIG[ch]; if (g) { draw(g, cx, y, ink); cx += 4; } }
+}
+function drawAura(x, y, ink) {
+  const t = Date.now() / 140;
+  for (let i = 0; i < 4; i++) {
+    const a = t + i * Math.PI / 2;
+    ctx.fillStyle = ink;
+    ctx.fillRect(Math.round(x + 8 + Math.cos(a) * 11), Math.round(y + 8 + Math.sin(a) * 8), 1, 1);
+  }
+}
 
 function render() {
   const pal = PALETTES[S ? S.palette : 'classic'];
-  const dark = S && S.sleeping && !game;
+  const dark = S && S.sleeping && !game && !battle;
   const BG = dark ? '#1c2117' : pal.bg, INK = dark ? '#6f7d55' : pal.ink;
   ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = INK; ctx.fillRect(0, GROUND, W, 1);
   [[6, GROUND + 2], [30, GROUND + 3], [52, GROUND + 2]].forEach(([x, y]) => draw(SPR.grass, x, y, INK));
   if (!S) return;
 
+  if (battle) return renderBattle(INK);
+
   if (game) {
     draw(game.spr, 4, GROUND - 16 + game.y, INK);
     game.obs.forEach(o => draw(o.spr, o.x, GROUND - o.spr.length, INK));
     return;
   }
+  if (S.explore) { draw(SPR.flag, W / 2 - 2, GROUND - 5, INK); return; }
 
-  const st = stageOf(S).id;
-  if (S.explore) {
-    draw(SPR.flag, W / 2 - 2, GROUND - 5, INK);
+  if (S.stage === 'egg') {
+    draw(SPR.egg, W / 2 - 8, GROUND - 16 + (frame % 4 < 2 ? 0 : 1), INK);
     return;
   }
-  const key = spriteKey(S);
-  const bob = (frame % 2 && !S.sleeping && !S.dead) ? 1 : 0;
-  if (st === 'egg') {
-    draw(SPR.egg, W / 2 - 8, GROUND - 16 + (frame % 4 < 2 ? 0 : 1), INK);
-  } else {
-    draw(SPR[key], petX, GROUND - 16 + bob - hop, INK, { flip: dir < 0, closed: S.sleeping });
+  const y = GROUND - 16 + ((frame % 2 && !S.sleeping && !S.dead) ? 1 : 0) - hop;
+
+  // 진화 연출: 이전/다음 모습이 번갈아 깜빡임
+  if (evo && Date.now() < evo.until) {
+    const left = evo.until - Date.now();
+    const fast = left < 1000 ? 70 : 160;
+    const showNew = Math.floor(Date.now() / fast) % 2 === 0;
+    draw(SPR[showNew ? evo.toKey : evo.fromKey], W / 2 - 8, GROUND - 16, INK);
+    drawAura(W / 2 - 8, GROUND - 16, INK); drawAura(W / 2 - 8, GROUND - 17, INK);
+    return;
   }
+
+  draw(SPR[spriteKey(S)], petX, y, INK, { flip: dir < 0, closed: S.sleeping });
+  if (S.stage === 'ultimate' && !S.dead) { drawAura(petX, y, INK); draw(SPR.crown, petX + (dir > 0 ? 9 : 2), y - 3, INK); }
   for (let i = 0; i < S.poops; i++) draw(SPR.poop, W - 7 - i * 6, GROUND - 4, INK);
   if (S.sleeping) draw(SPR.z, petX + 14 + (frame % 4 < 2 ? 0 : 1), GROUND - 22 - (frame % 4 < 2 ? 0 : 2), INK);
   if (S.sick && !S.dead) draw(SPR.skull, 2, 2, INK);
   if (effect && Date.now() < effect.until) draw(SPR[effect.spr], petX + (dir > 0 ? 15 : -5), GROUND - 22, INK);
+  drawText('' + S.lv, W - 4 * String(S.lv).length - 1, 2, INK);
+}
+
+function renderBattle(INK) {
+  const now = Date.now(), a = battle.anim && now < battle.anim.until ? battle.anim : null;
+  const blink = Math.floor(now / 60) % 2 === 0;
+  // 내 공룡
+  const meSpr = SPR[spriteKey(S)];
+  const meX = 3 + (a && a.who === 'me' && a.type === 'lunge' ? 5 : 0);
+  const meY = GROUND - 16;
+  if (!(a && a.who === 'me' && a.type === 'hit' && blink)) {
+    draw(meSpr, meX, meY, INK, { closed: S.hp <= 0 });
+    if (S.stage === 'ultimate') drawAura(meX, meY, INK);
+  }
+  // 적
+  const e = battle.e, eSpr = SPR[e.spr], ew = sprW(eSpr);
+  const foeX = W - 3 - ew - (a && a.who === 'foe' && a.type === 'lunge' ? 5 : 0);
+  const foeY = GROUND - eSpr.length;
+  const gone = battle.foeGone && now - battle.foeGone > 600;
+  const dying = battle.foeGone && !gone && blink;
+  if (!gone && !dying && !(a && a.who === 'foe' && a.type === 'hit' && blink)) {
+    draw(eSpr, foeX, foeY, INK, { flip: !!e.flip });
+    if (e.boss) draw(SPR.crown, foeX + Math.floor(ew / 2) - 2, foeY - 4, INK);
+  }
+  if (gone) draw(SPR.star, W - 14 + (Math.floor(now / 200) % 2), GROUND - 10, INK);
+  // 떠오르는 데미지 숫자
+  battle.floats = battle.floats.filter(f => now - f.t0 < 800);
+  for (const f of battle.floats) {
+    const p = (now - f.t0) / 800;
+    const fx = f.side === 'me' ? meX + 4 : foeX + Math.floor(ew / 2) - 4;
+    const fy = (f.side === 'me' ? meY : foeY) - 6 - Math.round(p * 8);
+    drawText(f.text, fx, fy, INK);
+  }
 }
 
 function animate() {
   frame++;
-  if (S && !S.dead && !S.sleeping && !S.explore && !game && stageOf(S).id !== 'egg') {
+  if (S && !S.dead && !S.sleeping && !S.explore && !game && !battle && S.stage !== 'egg') {
     if (Math.random() < 0.75) petX += dir;
     const maxX = W - 17 - S.poops * 6;
     if (petX <= 1 || petX >= maxX || Math.random() < 0.08) dir *= -1;
@@ -812,27 +1300,30 @@ function animate() {
 
 function renderUI() {
   if (!S) return;
-  const st = stageOf(S);
-  $('name').textContent = S.name;
-  const label = st.id === 'adult' ? DINOS[S.type].name : st.name;
-  $('age').textContent = `${label} · ${Math.floor(S.ageMin / 1440) + 1}일째`;
+  const st = stats(S);
+  $('name').textContent = `${S.name}  Lv.${S.lv}`;
+  $('age').textContent = `${displayName(S)} · ${Math.floor(S.ageMin / 1440) + 1}일째`;
   let status = `🪙 ${S.coins} 💎 ${WALLET.gems} · 💪${S.str} ⚡${S.spd} 🧠${S.int}`;
-  if (S.explore) status += ` · ${LOCS[S.explore.loc].icon} ${Math.ceil(S.explore.left)}분 남음`;
+  if (S.explore) status += ` · ${LOCS[S.explore.loc].icon} ${Math.ceil(S.explore.left)}분`;
   $('status').textContent = status;
   const items = [
-    ['배부름', S.hunger, '#ff9f43'], ['행복', S.happy, '#ff6b9a'], ['체력', S.energy, '#48c774'],
+    ['배부름', S.hunger, '#ff9f43'], ['행복', S.happy, '#ff6b9a'], ['기력', S.energy, '#48c774'],
     ['청결', S.clean, '#3fa7ff'], ['건강', S.health, '#9b6bff'],
   ];
+  const need = expNeed(S.lv);
   $('bars').innerHTML = items.map(([n, v, c]) =>
-    `<div class="bar"><span>${n}</span><div class="track"><div class="fill" style="width:${v}%;background:${c}"></div></div></div>`).join('');
-  $('bSleep').textContent = S.sleeping ? '☀️ 깨우기' : '💤 재우기';
+    `<div class="bar"><span>${n}</span><div class="track"><div class="fill" style="width:${v}%;background:${c}"></div></div></div>`).join('') +
+    `<div class="bar"><span>HP</span><div class="track"><div class="fill" style="width:${(S.hp / st.maxHp) * 100}%;background:#ff5a4a"></div></div></div>` +
+    `<div class="bar wide"><span>EXP</span><div class="track"><div class="fill" style="width:${S.lv >= MAX_LV ? 100 : (S.exp / need) * 100}%;background:#f5b700"></div></div><span>${S.lv >= MAX_LV ? 'MAX' : `${S.exp}/${need}`}</span></div>`;
+  $('bSleep').innerHTML = S.sleeping ? '<b>☀️</b>깨우기' : '<b>💤</b>재우기';
 }
 
 /* 화면 탭: 게임 중엔 점프, 평소엔 콕 찌르기 */
 $('screen').addEventListener('pointerdown', e => {
   e.preventDefault();
   if (game) return jump();
-  if (!S || S.dead || S.sleeping || S.explore || stageOf(S).id === 'egg') return;
+  if (battle) return;
+  if (!S || S.dead || S.sleeping || S.explore || S.stage === 'egg') return;
   hop = 4;
   if (Date.now() - (S.lastPoke || 0) > 8000) { S.lastPoke = Date.now(); S.happy += 1; after(); }
   say(pick(['콕! 🦖', '왜요~?', '헤헤 😆', '크앙! 🦖']));
@@ -843,13 +1334,13 @@ $('screen').addEventListener('pointerdown', e => {
    ========================================================= */
 function showDead() {
   const d = Math.floor(S.ageMin / 1440), h = Math.floor(S.ageMin % 1440 / 60);
-  const t = S.type ? `${DINOS[S.type].name} ` : '';
-  $('deadText').textContent = `${t}${S.name}는 ${d}일 ${h}시간을 함께했어요.`;
+  $('deadText').textContent = `Lv.${S.lv} ${displayName(S)} ${S.name}는 ${d}일 ${h}시간을 함께했어요.`;
   $('bRevive').textContent = WALLET.revive > 0 ? `👼 부활권 사용 (보유 ${WALLET.revive})` : `👼 부활시키기 (💎10)`;
   $('ovDead').classList.add('show');
 }
 function resetGame() {
-  localStorage.removeItem(SAVE_KEY); S = null; game = null;
+  localStorage.removeItem(SAVE_KEY); S = null; game = null; battle = null;
+  $('device').classList.remove('fight');
   $('ovDead').classList.remove('show');
   $('inName').value = '';
   $('ovStart').classList.add('show');
@@ -870,6 +1361,7 @@ $('bRevive').onclick = revive;
   const u = new URL(location.href); u.searchParams.delete('gift'); history.replaceState(null, '', u);
   setTimeout(() => { alert(r.msg); renderUI(); }, 300);
 })();
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) save(); else if (S && !S.dead) { catchUp(); renderUI(); if (S.dead) showDead(); }
 });
