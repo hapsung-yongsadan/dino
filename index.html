@@ -44,6 +44,13 @@
   .battle { display: none; width: 100%; background: rgba(255,255,255,.92); border-radius: 14px; padding: 10px 11px; }
   .device.fight .battle { display: block; }
   .device.fight .bars, .device.fight .btns { display: none; }
+  .device.fight .autop { display: none; }
+  .device.auto .autop { display: block; }
+  .device.auto .bars, .device.auto .btns { display: none; }
+  .ap-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 8px; color: #2f4a26; }
+  .ap-head small { font-size: 12px; color: #555; font-weight: 700; }
+  .bt-btns.three { grid-template-columns: repeat(3, 1fr); }
+  .autop .bt-btns button { color: #2f7d2c; box-shadow: 0 4px 0 #2b6e28; }
   .bt-row { display: grid; grid-template-columns: 96px 1fr 62px; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #333; margin-bottom: 7px; }
   .bt-row .track { height: 10px; }
   .bt-row small { text-align: right; color: #666; font-weight: 600; }
@@ -112,6 +119,12 @@
     <button data-act="bag"><b>🎒</b>가방</button>
     <button data-act="shop"><b>🏪</b>상점</button>
     <button data-act="menu"><b>📖</b>메뉴</button>
+  </div>
+  <div class="battle autop" id="autoPanel">
+    <div class="ap-head"><b id="apZone">-</b><small id="apStats"></small></div>
+    <div class="bt-row"><span>HP</span><div class="track"><div class="fill" id="apHp" style="background:#48c774"></div></div><small id="apHpT"></small></div>
+    <div class="bt-row"><span id="apFoe">-</span><div class="track"><div class="fill" id="apFoeHp" style="background:#ff5a4a"></div></div><small id="apFoeHpT"></small></div>
+    <div class="bt-btns three"><button id="apFeed">🍖<br>먹이</button><button id="apBag">🎒<br>가방</button><button id="apHome">🏠<br>귀환</button></div>
   </div>
   <div class="battle" id="battle">
     <div class="bt-row"><span id="btMe">-</span><div class="track"><div class="fill" id="btMeHp" style="background:#48c774"></div></div><small id="btMeHpT"></small></div>
@@ -281,6 +294,7 @@ const GEM_SHOP = [
   { id: 'return',  icon: '🏃', name: '탐험 즉시 귀환', sub: '탐험 중일 때 바로 돌아와요', gems: 3 },
   { id: 'coins',   icon: '🪙', name: '코인 50개',      sub: '일반 코인으로 교환', gems: 1 },
   { id: 'exp',     icon: '📗', name: '경험치 물약',    sub: '다음 레벨까지 필요한 경험치의 50%', gems: 5 },
+  { id: 'boost',   icon: '🔥', name: '자동 사냥 보상 2배', sub: '24시간 동안 경험치·코인 2배', gems: 10 },
   { id: 'revive',  icon: '👼', name: '부활권',         sub: '떠난 공룡을 되살려요 (가방에 보관)', gems: 10 },
   { id: 'fixType', icon: '🧬', name: '진화 확정권',    sub: '어른이 될 종류를 직접 골라요', gems: 15 },
 ];
@@ -742,7 +756,9 @@ function buildBG(scene, tod) {
 
   const tint = { dawn: ['#f0a070', .2], dusk: ['#b8483a', .28], night: ['#14204a', .55] }[tod];
   if (tint && scene !== 'volcano') { l.globalCompositeOperation = 'source-atop'; l.globalAlpha = tint[1]; l.fillStyle = tint[0]; l.fillRect(0, 0, LW, LH); l.globalAlpha = 1; l.globalCompositeOperation = 'source-over'; }
+  const skyOnly = document.createElement('canvas'); skyOnly.width = LW; skyOnly.height = LH; skyOnly.getContext('2d').drawImage(cv2, 0, 0);
   g.drawImage(land, 0, 0);
+  cv2.sky = skyOnly; cv2.land = land;
   bgCache[key] = cv2;
   return cv2;
 }
@@ -952,21 +968,26 @@ function step(s) {
     if (s.energy >= 100) { s.sleeping = false; events.push('☀️ 푹 자고 일어났어요!'); }
   } else {
     s.hunger -= RATE.hunger;
-    s.happy  -= RATE.happy;
+    if (!s.auto) s.happy -= RATE.happy; // 모험 중엔 즐거워서 행복이 안 떨어짐
     s.energy -= RATE.energy;
-    if (Math.random() < 1 / 45) s.poops = Math.min(4, s.poops + 1);
-    if (s.energy <= 0 && !battle) { s.sleeping = true; events.push('😪 지쳐서 잠들었어요…'); }
+    if (!s.auto && Math.random() < 1 / 45) s.poops = Math.min(4, s.poops + 1);
+    if (s.energy <= 0 && !battle) { if (s.auto) endAuto('😪 지쳐서 돌아왔어요'); s.sleeping = true; events.push('😪 지쳐서 잠들었어요…'); }
   }
   if (!battle) {
     const mx = stats(s).maxHp;
     s.hp = Math.min(mx, s.hp + mx * (s.sleeping ? 0.05 : 0.01));
   }
-  s.clean -= s.poops * 0.8;
+  s.clean -= s.poops * 0.35;
+  // 배가 많이 고프면 가방 속 음식을 스스로 꺼내 먹음
+  if (s.hunger < 20 && !s.explore) {
+    const food = ['fruit', 'fish', 'meat', 'leaf'].find(k => s.inv[k]);
+    if (food) { const it = ITEMS[food]; s.inv[food]--; if (!s.inv[food]) delete s.inv[food]; s.hunger += it.hunger; s.happy += it.happy || 0; if (it.diet === 'meat') s.meat++; if (it.diet === 'plant') s.plant++; events.push(`${it.icon} 배고파서 가방 속 ${it.name}을(를) 꺼내 먹었어요`); }
+  }
 
   if (!s.sick && (s.clean < 25 || s.hunger < 10) && Math.random() < 0.02) { s.sick = true; events.push('🤒 아파요! 약이 필요해요'); }
 
   const bad = [s.hunger, s.happy, s.energy, s.clean].filter(v => v <= 0).length + (s.sick ? 1 : 0);
-  s.health += bad ? -0.5 * bad : 0.2;
+  s.health += bad ? -0.07 * bad : 0.2; // 방치형: 하루 넘게 방치해야 위험
   clampAll(s);
   if (s.health <= 0) s.dead = true;
 }
@@ -1001,9 +1022,25 @@ function finishExplore(s) {
 let acc = 0, lastReal = Date.now();
 function catchUp() {
   const mins = Math.min(MAX_OFFLINE_MIN, Math.floor((Date.now() - S.last) * SPEED / 60000));
-  for (let i = 0; i < mins; i++) step(S);
+  let before = null;
+  if (S.auto) {
+    const tt = S.auto.total;
+    before = { zone: S.auto.zone, ref: tt, kills: tt.kills, exp: tt.exp, coins: tt.coins, ate: tt.ate || 0, items: { ...tt.items }, lv: S.lv, capped: false };
+  }
+  const offMax = AUTO.offlineMaxH * 3600000;
+  for (let i = 0; i < mins; i++) {
+    step(S);
+    if (S.auto && !S.dead) {
+      const chunk = 60000 / SPEED;
+      if (S.auto.offMs + chunk <= offMax) { S.auto.offMs += chunk; autoAdvance(chunk, false); }
+      else before.capped = true;
+    }
+  }
+  if (S.auto) S.auto.offMs = 0;
   lastReal = Date.now(); acc = 0;
   flushEvents(); save();
+  if (before && mins > 0) showAutoSummary(before);
+  $('device').classList.toggle('auto', !!S.auto);
 }
 function tickTime() {
   if (!S || S.dead) return;
@@ -1012,7 +1049,7 @@ function tickTime() {
   let stepped = false;
   while (acc >= 60000) { step(S); acc -= 60000; stepped = true; }
   if (stepped) { flushEvents(); save(); renderUI(); }
-  if (S.dead) { if (battle) endBattle(); showDead(); }
+  if (S.dead) { if (battle) endBattle(); if (S.auto) { S.auto = null; $('device').classList.remove('auto'); } showDead(); }
 }
 function flushEvents() { if (events.length) { say(events[events.length - 1]); events = []; } }
 
@@ -1051,6 +1088,7 @@ function blocked(opts = {}) {
   if (!S || S.dead) return '...';
   if (game) return '게임 중이에요';
   if (battle) return '사냥 중이에요';
+  if (S.auto && !opts.allowAuto) return '🔁 자동 사냥 중이에요 (🏠 귀환으로 멈춰요)';
   if (S.stage === 'egg') return '아직 알이에요… 곧 깨어나요!';
   if (S.explore && !opts.allowExplore) return `${LOCS[S.explore.loc].name} 탐험 중이에요 🗺️`;
   if (S.sleeping && !opts.allowSleep) return '쿨쿨 자고 있어요 😴';
@@ -1074,7 +1112,7 @@ function eat(id, fromBag) {
 
 const ACTIONS = {
   feed() {
-    if (!guard()) return;
+    if (!guard({ allowAuto: true })) return;
     const rows = [
       { icon: '🍖', label: '고기', sub: '기본 먹이 · HP 회복 · 육식 성향 ↑', fn: () => eat('meat') },
       { icon: '🌿', label: '풀잎', sub: '기본 먹이 · HP 회복 · 초식 성향 ↑', fn: () => eat('leaf') },
@@ -1113,7 +1151,7 @@ const ACTIONS = {
       return {
         icon: Z.icon, label: Z.name, disabled: locked || S.energy < 5 || S.hp < 1,
         sub: locked ? `🔒 Lv.${Z.lv}부터` : `몬스터 ${Z.mobs.map(m => m.name).join('·')} · 보스 게이지 ${Math.min(g, BOSS_GAUGE)}/${BOSS_GAUGE}`,
-        right: locked ? '' : `Lv.${Z.lv}+`, fn: () => startBattle(id, false),
+        right: locked ? '' : `Lv.${Z.lv}+`, keep: true, fn: () => chooseHuntMode(id),
       };
     });
     for (const [id, Z] of Object.entries(ZONES)) {
@@ -1151,7 +1189,7 @@ const ACTIONS = {
     })), { html: S.stage !== 'adult' && S.stage !== 'ultimate' ? '<div class="note">Lv.12에 어른이 될 때, 가장 높은 능력치와 식성으로 공룡 종류가 정해져요.</div>' : '' });
   },
   bag() {
-    if (!guard({ allowExplore: true, allowSleep: true })) return;
+    if (!guard({ allowExplore: true, allowSleep: true, allowAuto: true })) return;
     const rows = Object.entries(S.inv).map(([id, n]) => {
       const it = ITEMS[id];
       return { icon: it.icon, label: it.name, sub: effectText(it), right: `x${n}`, fn: () => useItem(id) };
@@ -1159,7 +1197,7 @@ const ACTIONS = {
     openSheet('🎒 가방', rows, { right: `🪙 ${S.coins}`, html: rows.length ? '' : '<div class="note">가방이 비어 있어요. 사냥·탐험·상점에서 구해보세요.</div>' });
   },
   shop() {
-    if (!guard({ allowExplore: true, allowSleep: true })) return;
+    if (!guard({ allowExplore: true, allowSleep: true, allowAuto: true })) return;
     const rows = SHOP.map(({ id, price }) => {
       const it = ITEMS[id];
       return { icon: it.icon, label: it.name, sub: effectText(it), right: `🪙${price}`, disabled: S.coins < price, keep: true,
@@ -1222,6 +1260,8 @@ function buyGem(g) {
     finishExplore(S); flushEvents();
   } else if (g.id === 'coins') {
     S.coins += 50; say('🪙 코인 50개를 받았어요');
+  } else if (g.id === 'boost') {
+    S.autoBoostUntil = Math.max(Date.now(), S.autoBoostUntil || 0) + 86400000; say('🔥 24시간 동안 자동 사냥 보상 2배!');
   } else if (g.id === 'exp') {
     const amt = Math.ceil(expNeed(S.lv) * 0.5); say(`📗 경험치 +${amt}`); gainExp(S, amt);
   } else if (g.id === 'revive') {
@@ -1261,7 +1301,7 @@ function effectText(it) {
 }
 function useItem(id) {
   const it = ITEMS[id];
-  const b = blocked();
+  const b = blocked({ allowAuto: true });
   if (b) return say(b);
   if (it.kind === 'med') {
     if (!S.sick) return say('아프지 않아요! 아껴두세요 💊');
@@ -1343,6 +1383,14 @@ document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => { ACTIONS
    ⚔️ 사냥 (턴제 전투)
    ========================================================= */
 let battle = null;
+function chooseHuntMode(id) {
+  const Z = ZONES[id];
+  openSheet(`${Z.icon} ${Z.name}`, [
+    { icon: '⚔️', label: '직접 사냥', sub: '한 마리씩 내가 조종해요 · 보상 100% · 기력 -5', disabled: S.energy < 5, fn: () => startBattle(id, false) },
+    { icon: '🔁', label: '자동 사냥 (방치)', sub: `공룡이 혼자 돌아다니며 계속 사냥 · 앱을 꺼도 최대 ${AUTO.offlineMaxH}시간${autoOverLevel(id) ? ' · ⚠️ 레벨이 높아 보상이 적어요' : ''}`, fn: () => startAuto(id) },
+    { icon: '←', label: '뒤로', keep: true, fn: ACTIONS.hunt },
+  ], { html: '<div class="note">자동 사냥 중 배가 고프면 가방 속 음식(열매·생선·고기 등)을 꺼내 먹어요. 도시락이 떨어지거나 기력이 다하거나 기절하면 집으로 돌아와요. 회복약이 있으면 위험할 때 알아서 마셔요. 보스는 직접 사냥으로만 도전할 수 있어요.</div>' });
+}
 function startBattle(zoneId, boss) {
   const Z = ZONES[zoneId];
   const def = boss ? Z.boss : pick(Z.mobs);
@@ -1532,6 +1580,192 @@ function battleItem() {
 }
 
 /* =========================================================
+   🔁 자동 사냥 (방치형)
+   공룡이 사냥터를 걸어 다니며 혼자 싸움. 앱을 꺼도 계속 진행(최대 8시간).
+   ========================================================= */
+const AUTO = { expRate: 0.25, coinRate: 0.35, dropRate: 0.35, walkMs: 7000, turnMs: 900, restMs: 1000, offlineMaxH: 8 };
+
+// 다음 사냥터 입장 레벨 + 2를 넘으면 '너무 쉬운 곳'
+function autoOverLevel(zoneId) {
+  const ids = Object.keys(ZONES), next = ZONES[ids[ids.indexOf(zoneId) + 1]];
+  return next ? S.lv > next.lv + 2 : false;
+}
+function startAuto(zoneId) {
+  if (!guard()) return;
+  if (S.hunger < 15) return say('배가 너무 고파요! 먼저 먹이를 주세요 🍖');
+  if (S.energy < 10) return say('기력이 부족해요. 먼저 재워주세요 💤');
+  if (S.hp < stats(S).maxHp * 0.3) return say('HP가 낮아요. 먼저 회복하세요');
+  S.sleeping = false;
+  S.auto = { zone: zoneId, phase: 'walk', t: 1500, foe: null, turn: 'me', cd: 1, scroll: 0,
+             total: { kills: 0, exp: 0, coins: 0, items: {}, lv: S.lv }, offMs: 0, floats: [], anim: null };
+  $('device').classList.add('auto');
+  say(`🔁 ${ZONES[zoneId].name}(으)로 자동 사냥을 떠났어요!`);
+  after();
+}
+function endAuto(reason) {
+  const A = S.auto; if (!A) return;
+  const tt = A.total;
+  S.auto = null;
+  $('device').classList.remove('auto');
+  const msg = `${reason}\n처치 ${tt.kills}마리 · EXP +${tt.exp} · 🪙${tt.coins}`;
+  say(msg);
+  S.lastAutoEnd = reason;
+  after();
+}
+
+function autoAdvance(ms, live) {
+  const A = S.auto;
+  while (ms > 0 && S.auto && !S.dead) {
+    const d = Math.min(ms, A.t);
+    A.t -= d; ms -= d;
+    if (A.phase === 'walk') A.scroll += d * 0.012;
+    if (A.t > 0) break;
+    autoEvent(A, live);
+  }
+}
+function autoFx(side, text) { if (S.auto) S.auto.floats.push({ side, text: String(text), t0: Date.now() }); }
+function autoAnim(who, type, ms = 260) { S.auto.anim = { who, type, until: Date.now() + ms }; }
+
+function autoEvent(A, live) {
+  const st = stats(S), Z = ZONES[A.zone];
+  if (A.phase === 'walk') {
+    const def = pick(Z.mobs), v = 0.9 + Math.random() * 0.25;
+    A.foe = { ...def, maxHp: Math.round(def.hp * v), atk: Math.round(def.atk * v) };
+    A.foe.hp = A.foe.maxHp;
+    A.phase = 'fight'; A.foeIn = Date.now();
+    A.turn = A.foe.spd > st.spd + 5 ? 'foe' : 'me';
+    A.t = AUTO.turnMs + 500;
+    return;
+  }
+  if (A.phase === 'rest') {
+    S.hp = Math.min(st.maxHp, S.hp + st.maxHp * 0.05);
+    if (S.hp >= st.maxHp * 0.85) { A.phase = 'walk'; A.t = AUTO.walkMs; } else A.t = AUTO.restMs;
+    return;
+  }
+  // 전투 한 턴
+  const e = A.foe;
+  if (A.turn === 'me') {
+    let dmg, crit;
+    if (A.cd === 0) {
+      const sk = skillOf(S);
+      const r = calcDmg(st.atk * sk.mult + S.int, e.def, sk.crit ? 100 : st.crit, sk.pierce);
+      dmg = r.dmg * (sk.hits || 1); crit = r.crit; A.cd = 3;
+      if (sk.heal) S.hp = Math.min(st.maxHp, S.hp + st.maxHp * sk.heal);
+    } else {
+      const r = calcDmg(st.atk, e.def, st.crit); dmg = r.dmg; crit = r.crit; A.cd--;
+    }
+    e.hp -= dmg;
+    if (live) { autoAnim('me', 'lunge'); autoFx('foe', dmg + (crit ? '!' : '')); }
+    if (e.hp <= 0) return autoReward(A, e, live);
+    A.turn = 'foe'; A.t = AUTO.turnMs;
+    return;
+  }
+  const dodge = Math.max(3, Math.min(40, (st.spd - e.spd) * 1.5 + 5));
+  if (Math.random() * 100 < dodge) { if (live) { autoAnim('foe', 'lunge'); autoFx('me', 'MISS'); } }
+  else {
+    const r = calcDmg(e.atk, st.def, 5);
+    S.hp -= r.dmg;
+    if (live) { autoAnim('foe', 'lunge'); autoFx('me', r.dmg + (r.crit ? '!' : '')); }
+  }
+  if (S.hp <= 0) { S.hp = 1; S.happy -= 15; S.health -= 5; return endAuto('😵 기절해서 집으로 돌아왔어요'); }
+  A.turn = 'me'; A.t = AUTO.turnMs;
+  if (S.hp < st.maxHp * 0.3 && S.inv.potion) { // 위험하면 회복약 자동 사용
+    S.inv.potion--; if (!S.inv.potion) delete S.inv.potion;
+    const h = Math.round(st.maxHp * ITEMS.potion.heal); S.hp += h;
+    if (live) autoFx('me', '+' + h);
+  }
+}
+function autoReward(A, e, live) {
+  const boost = (S.autoBoostUntil || 0) > Date.now() ? 2 : 1;
+  const over = autoOverLevel(A.zone) ? 0.2 : 1; // 너무 쉬운 사냥터면 보상 감소
+  const exp = Math.max(1, Math.round(e.exp * AUTO.expRate * boost * over * (0.9 + Math.random() * 0.2)));
+  const coins = Math.max(1, Math.round(rand(...e.coins) * AUTO.coinRate * boost * over));
+  S.coins += coins; S.kills = (S.kills || 0) + 1; S.hunger -= 0.15;
+  A.total.kills++; A.total.exp += exp; A.total.coins += coins;
+  for (const [it, ch] of e.drops) if (Math.random() < ch * AUTO.dropRate) { S.inv[it] = (S.inv[it] || 0) + 1; A.total.items[it] = (A.total.items[it] || 0) + 1; }
+  S.bossGauge[A.zone] = (S.bossGauge[A.zone] || 0) + 1;
+  if (live) { A.foeGone = Date.now(); A.lastFoe = A.foe; autoFx('foe', `+${exp}EXP`); }
+  A.foe = null;
+  gainExp(S, exp);
+  if (S.hunger < 40) { // 배고프면 가방 속 음식을 꺼내 먹음 (도시락)
+    const food = ['fruit', 'fish', 'meat', 'leaf', 'cake'].find(k => S.inv[k]);
+    if (food) {
+      const it = ITEMS[food]; S.inv[food]--; if (!S.inv[food]) delete S.inv[food];
+      S.hunger += it.hunger || 0; S.happy += it.happy || 0; S.hp = Math.min(stats(S).maxHp, S.hp + stats(S).maxHp * FOOD_HEAL);
+      if (it.diet === 'meat') S.meat++; if (it.diet === 'plant') S.plant++;
+      A.total.ate = (A.total.ate || 0) + 1;
+      if (live) autoFx('me', it.icon);
+    }
+  }
+  if (S.hunger < 8) return endAuto('🍖 배가 고파서 돌아왔어요 (도시락을 챙겨주세요)');
+  if (S.energy < 3) { endAuto('😪 지쳐서 돌아와 잠들었어요'); S.sleeping = true; return; }
+  if (S.hp < stats(S).maxHp * 0.4) { A.phase = 'rest'; A.t = AUTO.restMs; }
+  else { A.phase = 'walk'; A.t = AUTO.walkMs; }
+}
+
+// 앱을 꺼둔 동안 진행된 결과 요약
+function showAutoSummary(b) {
+  const src = b.ref, kills = src.kills - b.kills, ended = !S.auto;
+  if (kills <= 0 && !ended) return;
+  const items = Object.entries(src.items).map(([k, n]) => [k, n - (b.items[k] || 0)]).filter(([, n]) => n > 0).map(([k, n]) => `${ITEMS[k].icon}x${n}`).join(' ');
+  const lvUp = S.lv - b.lv;
+  openSheet('🌙 방치하는 동안', [{ icon: '👍', label: '확인', fn: () => {} }], {
+    html: `<div class="note">${ZONES[b.zone].name}에서 사냥했어요
+⚔️ 처치 ${kills}마리
+✨ EXP +${src.exp - b.exp}${lvUp > 0 ? ` (레벨 +${lvUp} → Lv.${S.lv})` : ''}
+🪙 코인 +${src.coins - b.coins}${(src.ate || 0) - (b.ate || 0) > 0 ? `\n🍱 도시락 ${(src.ate || 0) - (b.ate || 0)}개 먹음` : ''}
+${items ? `🎒 ${items}\n` : ''}${b.capped ? `\n⏰ 방치 보상은 최대 ${AUTO.offlineMaxH}시간까지만 쌓여요` : ''}${ended ? `\n${S.lastAutoEnd || ''}` : '\n지금도 계속 사냥 중이에요 🔁'}</div>`,
+  });
+}
+
+function renderAutoPanel() {
+  const A = S && S.auto; if (!A) return;
+  const st = stats(S), Z = ZONES[A.zone], tt = A.total;
+  $('apZone').textContent = `${Z.icon} ${Z.name} 자동 사냥${(S.autoBoostUntil || 0) > Date.now() ? ' · 2배🔥' : ''}${autoOverLevel(A.zone) ? ' · 너무 쉬움(보상↓)' : ''}`;
+  $('apStats').textContent = `처치 ${tt.kills} · EXP +${tt.exp} · 🪙${tt.coins}`;
+  $('apHp').style.width = `${(S.hp / st.maxHp) * 100}%`;
+  $('apHpT').textContent = `${Math.ceil(S.hp)}/${st.maxHp}`;
+  const e = A.foe;
+  $('apFoe').textContent = e ? e.name : A.phase === 'rest' ? '💤 휴식 중' : '🚶 탐색 중…';
+  $('apFoeHp').style.width = e ? `${Math.max(0, e.hp / e.maxHp) * 100}%` : '0%';
+  $('apFoeHpT').textContent = e ? `${Math.max(0, Math.ceil(e.hp))}/${e.maxHp}` : '';
+}
+
+function renderAutoWorld(t) {
+  const A = S.auto, now = Date.now(), a = A.anim && now < A.anim.until ? A.anim : null;
+  const meX = 44 + (a && a.who === 'me' && a.type === 'lunge' ? 9 : 0);
+  A.meX = meX;
+  shadow(wctx, meX, GY + 2, 12);
+  if (S.stage === 'ultimate') aura(wctx, meX, GY - 14, t);
+  const walking = A.phase === 'walk';
+  drawCreature(wctx, spriteKey(S), meX, GY + 2, { t, face: 1, walk: walking ? t * 7 : null, sleep: A.phase === 'rest',
+    scale: (STAGE_SCALE[S.stage] || 1) * 0.92, ult: S.stage === 'ultimate', jaw: a && a.who === 'me' ? 1 : 0 });
+  const e = A.foe || (A.foeGone && now - A.foeGone < 600 ? A.lastFoe : null);
+  if (e) {
+    const enter = Math.min(1, (now - (A.foeIn || 0)) / 700);
+    let foeX = 172 - (172 - 118) * enter - (a && a.who === 'foe' && a.type === 'lunge' ? 9 : 0);
+    A.foeX = foeX;
+    const dying = !A.foe;
+    if (!(dying && Math.floor(now / 60) % 2)) {
+      shadow(wctx, foeX, GY + 2, 11);
+      drawCreature(wctx, e.spr, foeX, GY + 2, { t: t + 1.7, face: -1, scale: 0.92, colors: e.c, walk: enter < 1 ? t * 7 : null, jaw: a && a.who === 'foe' ? 1 : 0, flash: dying });
+    }
+  }
+}
+function renderAutoUI(t) {
+  const A = S.auto, now = Date.now(), X = v => v * (W / LW), Y = v => v * (H / LH);
+  badge(`Lv.${S.lv}`, 8, 8);
+  uiText('🔁 AUTO', W - 40, 18, 12, '#9dffb0');
+  A.floats = A.floats.filter(f => now - f.t0 < 1000);
+  for (const f of A.floats) {
+    const p = (now - f.t0) / 1000, fx = f.side === 'me' ? A.meX : (A.foeX || 118);
+    const exp = f.text.includes('EXP'), heal = f.text.startsWith('+') && !exp, miss = f.text === 'MISS', crit = f.text.endsWith('!');
+    uiText(f.text, X(fx), Y(GY - 44) - p * 26, crit ? 21 : exp ? 15 : 16, exp ? '#ffe36e' : heal ? '#7dff9a' : miss ? '#cfe3ff' : crit ? '#ffd23f' : '#ffffff');
+  }
+  if (A.phase === 'rest') uiText('💤 휴식 중', X(A.meX), Y(GY - 40), 13, '#cfe0ff');
+}
+
+/* =========================================================
    점프 미니게임
    ========================================================= */
 let game = null;
@@ -1614,12 +1848,20 @@ function badge(text, x, y) {
 function render() {
   const t = Date.now() / 1000;
   const tod = timeOfDay();
-  const scene = battle ? battle.zone === 'field' ? 'field' : battle.zone : 'home';
-  wctx.drawImage(buildBG(scene, tod), 0, 0);
+  const scene = battle ? battle.zone : S && S.auto ? S.auto.zone : 'home';
+  const bg = buildBG(scene, tod);
+  if (S && S.auto) { // 걸어가는 느낌: 배경을 거울처럼 이어 붙여 스크롤
+    const off = Math.floor(S.auto.scroll % (LW * 2));
+    wctx.drawImage(bg.sky, 0, 0);
+    wctx.drawImage(bg.land, -off, 0);
+    wctx.save(); wctx.translate(-off + LW * 2, 0); wctx.scale(-1, 1); wctx.drawImage(bg.land, 0, 0); wctx.restore();
+    wctx.drawImage(bg.land, -off + LW * 2, 0);
+  } else wctx.drawImage(bg, 0, 0);
   sceneFx(wctx, scene, tod, t);
 
   if (S) {
     if (battle) renderBattleWorld(t);
+    else if (S.auto) renderAutoWorld(t);
     else if (game) renderGameWorld(t);
     else renderHomeWorld(t);
   }
@@ -1704,6 +1946,7 @@ function renderBattleWorld(t) {
 }
 
 function renderUILayer(t) {
+  if (S.auto && !battle) return renderAutoUI(t);
   const X = v => v * (W / LW), Y = v => v * (H / LH);
   if (battle) {
     const now = Date.now();
@@ -1756,7 +1999,7 @@ function renderUI() {
 $('screen').addEventListener('pointerdown', e => {
   e.preventDefault();
   if (game) return jump();
-  if (battle) return;
+  if (battle || (S && S.auto)) return;
   if (!S || S.dead || S.sleeping || S.explore || S.stage === 'egg') return;
   pet.hopV = -2.6;
   if (Date.now() - (S.lastPoke || 0) > 8000) { S.lastPoke = Date.now(); S.happy += 1; after(); }
@@ -1774,7 +2017,7 @@ function showDead() {
 }
 function resetGame() {
   localStorage.removeItem(SAVE_KEY); S = null; game = null; battle = null;
-  $('device').classList.remove('fight');
+  $('device').classList.remove('fight', 'auto');
   $('ovDead').classList.remove('show');
   $('inName').value = '';
   $('ovStart').classList.add('show');
@@ -1786,6 +2029,9 @@ $('bStart').onclick = () => {
 };
 $('bRestart').onclick = resetGame;
 $('bRevive').onclick = revive;
+$('apFeed').onclick = () => { ACTIONS.feed(); after(); };
+$('apBag').onclick = () => { ACTIONS.bag(); after(); };
+$('apHome').onclick = () => endAuto('🏠 집으로 돌아왔어요');
 
 // 선물 링크(?gift=...)로 들어오면 자동으로 받기
 (async () => {
@@ -1809,6 +2055,8 @@ setInterval(() => {
   t++;
   if (game) updateGame();
   updatePet();
+  if (S && S.auto && !S.dead && !document.hidden) { const n = Date.now(); autoAdvance(Math.min(500, n - (window._autoLast || n)), true); window._autoLast = n; if (t % 6 === 0) { renderAutoPanel(); } }
+  else window._autoLast = Date.now();
   if (t % 15 === 0) { animate(); tickTime(); }
   render();
 }, 33);
