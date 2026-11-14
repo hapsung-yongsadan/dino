@@ -29,9 +29,18 @@
   .bar.wide span:last-child { text-align: right; color: #777; font-size: 11px; }
   .track { height: 8px; background: #e4e4e4; border-radius: 5px; overflow: hidden; }
   .fill { height: 100%; border-radius: 5px; transition: width .35s; }
-  .btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
-  .btns button { padding: 7px 0 6px; font-size: 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .btns button b { font-size: 20px; line-height: 1; }
+  .btns { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; width: 100%; }
+  .btns button { padding: 7px 0 6px; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .btns button b { font-size: 19px; line-height: 1; }
+  .btns button.herd { color: #6b3fb0; box-shadow: 0 4px 0 #4b2a80; }
+  .hgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .hcell { position: relative; background: #f4f8f1; color: #222; box-shadow: none; border-radius: 12px; padding: 6px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 1px; border: 2px solid transparent; }
+  .hcell.on { border-color: #3f9a3a; background: #eaf6e4; }
+  .hcell img { width: 90px; height: 68px; image-rendering: pixelated; }
+  .hcell b { font-size: 12px; } .hcell small { font-size: 12px; color: #e0a21b; letter-spacing: -1px; }
+  .hcell small.st5 { color: #d6336c; }
+  .hcell .tag { position: absolute; top: 4px; left: 4px; font-size: 10px; background: #3f9a3a; color: #fff; border-radius: 6px; padding: 1px 5px; }
+  .hcell .tag.m { left: auto; right: 4px; background: #7b5cff; }
   .btns button.hunt { color: #b8321f; box-shadow: 0 4px 0 #8f2f1f; }
   button {
     border: none; border-radius: 14px; padding: 10px 0; font-size: 14px; font-weight: 800; color: #2f7d2c; background: #fff;
@@ -116,9 +125,11 @@
     <button data-act="hunt" class="hunt"><b>⚔️</b>사냥</button>
     <button data-act="explore"><b>🗺️</b>탐험</button>
     <button data-act="train"><b>💪</b>훈련</button>
+    <button data-act="herd" class="herd"><b>🦕</b>무리</button>
     <button data-act="bag"><b>🎒</b>가방</button>
     <button data-act="shop"><b>🏪</b>상점</button>
-    <button data-act="menu"><b>📖</b>메뉴</button>
+    <button data-act="dex"><b>📚</b>도감</button>
+    <button data-act="menu"><b>⚙️</b>메뉴</button>
   </div>
   <div class="battle autop" id="autoPanel">
     <div class="ap-head"><b id="apZone">-</b><small id="apStats"></small></div>
@@ -204,6 +215,7 @@ const ITEMS = {
   honey:  { name: '꿀물',   icon: '🍯', kind: 'drink', energy: 35 },
   potion: { name: '회복약', icon: '🧪', kind: 'potion', heal: 0.5 },
   med:    { name: '약',     icon: '💊', kind: 'med' },
+  dinoEgg:{ name: '공룡알', icon: '🥚', kind: 'egg' },
 };
 const FOOD_HEAL = 0.15; // 음식은 최대 HP의 15% 회복
 
@@ -230,7 +242,7 @@ const LOCS = {
   volcano: { name: '화산', icon: '🌋', min: 20, energy: 30, need: 'child', coins: [10, 25], exp: 70,
              items: ['meat', 'honey', 'potion'], fossils: ['glass', 'trexTooth', 'raptorClaw'], gain: 'str' },
   cave:    { name: '동굴', icon: '🕳️', min: 30, energy: 35, need: 'adult', coins: [15, 40], exp: 150,
-             items: ['cake', 'med', 'potion'], fossils: ['triHorn', 'pteroBone', 'eggFossil', 'amber'], gain: 'int' },
+             items: ['cake', 'med', 'potion', 'dinoEgg'], fossils: ['triHorn', 'pteroBone', 'eggFossil', 'amber'], gain: 'int' },
 };
 
 const TRAINS = {
@@ -274,7 +286,7 @@ const ZONES = {
 const BOSS_GAUGE = 5; // 일반 몬스터 5마리 잡으면 보스 등장
 
 const SHOP = [
-  { id: 'potion', price: 15 }, { id: 'fish', price: 6 }, { id: 'fruit', price: 6 }, { id: 'cake', price: 30 },
+  { id: 'potion', price: 15 }, { id: 'dinoEgg', price: 80 }, { id: 'fish', price: 6 }, { id: 'fruit', price: 6 }, { id: 'cake', price: 30 },
   { id: 'honey', price: 20 }, { id: 'med', price: 20 },
 ];
 
@@ -294,6 +306,7 @@ const GEM_SHOP = [
   { id: 'return',  icon: '🏃', name: '탐험 즉시 귀환', sub: '탐험 중일 때 바로 돌아와요', gems: 3 },
   { id: 'coins',   icon: '🪙', name: '코인 50개',      sub: '일반 코인으로 교환', gems: 1 },
   { id: 'exp',     icon: '📗', name: '경험치 물약',    sub: '다음 레벨까지 필요한 경험치의 50%', gems: 5 },
+  { id: 'eggs',    icon: '🥚', name: '공룡알 5개',     sub: '부화시켜 무리를 키워요', gems: 5 },
   { id: 'boost',   icon: '🔥', name: '자동 사냥 보상 2배', sub: '24시간 동안 경험치·코인 2배', gems: 10 },
   { id: 'revive',  icon: '👼', name: '부활권',         sub: '떠난 공룡을 되살려요 (가방에 보관)', gems: 10 },
   { id: 'fixType', icon: '🧬', name: '진화 확정권',    sub: '어른이 될 종류를 직접 골라요', gems: 15 },
@@ -803,13 +816,15 @@ function newPet(name) {
     sleeping: false, sick: false, poops: 0, dead: false,
     coins: 20, inv: { med: 1, potion: 2 }, explore: null, hi: 0,
     palette: 'classic', palettes: ['classic'], lastPet: 0,
-    bossGauge: {}, bossKills: {}, kills: 0,
+    bossGauge: {}, bossKills: {}, kills: 0, herd: [], party: [], herdSeq: 1,
   };
+  s.inv.dinoEgg = 1;
   s.hp = stats(s).maxHp;
   return s;
 }
 function migrate(s) {
   if (!s) return s;
+  if (!s.herd) { herdInit(s); s.inv = s.inv || {}; s.inv.dinoEgg = (s.inv.dinoEgg || 0) + 1; }
   if (s.lv === undefined) { // v1 → v2: 시간 기반 성장에서 레벨 기반으로
     s.stage = s.ageMin < 1 ? 'egg' : s.ageMin < 60 ? 'baby' : s.ageMin < 1440 ? 'child' : 'adult';
     s.lv = { egg: 1, baby: 1, child: 5, adult: 12 }[s.stage];
@@ -899,6 +914,8 @@ function stats(s) {
   if (t === 'tri') st.def = Math.round(st.def * 1.3);
   if (t === 'ptera') st.crit += 10;
   if (t === 'brachio') st.maxHp = Math.round(st.maxHp * 1.25);
+  const pb = s.herd ? partyBonus(s).power : 0; // 출전 무리 보너스
+  st.maxHp = Math.round(st.maxHp * (1 + pb)); st.atk = Math.round(st.atk * (1 + pb));
   return st;
 }
 function skillOf(s) {
@@ -1078,6 +1095,7 @@ function openSheet(title, rows, opts = {}) {
     b.onclick = () => { if (!r.keep) closeSheet(); r.fn && r.fn(); after(); };
     box.appendChild(b);
   });
+  if (opts.after) box.insertAdjacentHTML('beforeend', opts.after);
   $('sheet').classList.add('show');
 }
 function closeSheet() { $('sheet').classList.remove('show'); }
@@ -1211,6 +1229,15 @@ const ACTIONS = {
     }
     openSheet('🏪 상점', rows, { right: `🪙 ${S.coins}` });
   },
+  herd() { if (!S || S.dead) return; openHerd(); },
+  dex() {
+    if (!S) return;
+    openSheet('📚 도감', [
+      { icon: '🦕', label: '공룡 도감', sub: `${Object.keys(DEX.dinos).length + Object.keys(DEX.ults).length} / ${Object.keys(DINOS).length * 2}종`, keep: true, fn: showDinoDex },
+      { icon: '🦴', label: '화석 도감', sub: `${Object.keys(DEX.fossils).length} / ${Object.keys(FOSSILS).length}개`, keep: true, fn: showFossilDex },
+      { icon: '👑', label: '보스 도감', sub: `${Object.keys(DEX.bosses).length} / ${Object.keys(ZONES).length}마리`, keep: true, fn: showBossDex },
+    ]);
+  },
   menu() {
     if (!S) return;
     openSheet('📖 메뉴', [
@@ -1260,6 +1287,8 @@ function buyGem(g) {
     finishExplore(S); flushEvents();
   } else if (g.id === 'coins') {
     S.coins += 50; say('🪙 코인 50개를 받았어요');
+  } else if (g.id === 'eggs') {
+    S.inv.dinoEgg = (S.inv.dinoEgg || 0) + 5; say('🥚 공룡알 5개를 받았어요!');
   } else if (g.id === 'boost') {
     S.autoBoostUntil = Math.max(Date.now(), S.autoBoostUntil || 0) + 86400000; say('🔥 24시간 동안 자동 사냥 보상 2배!');
   } else if (g.id === 'exp') {
@@ -1297,12 +1326,14 @@ function effectText(it) {
   if (it.heal) t.push(`HP ${it.heal * 100}% 회복`);
   if (it.diet) t.push(it.diet === 'meat' ? '육식' : '초식');
   if (it.kind === 'med') t.push('병을 고쳐요');
+  if (it.kind === 'egg') t.push('부화하면 무리에 들어와요');
   return t.join(' · ');
 }
 function useItem(id) {
   const it = ITEMS[id];
   const b = blocked({ allowAuto: true });
   if (b) return say(b);
+  if (it.kind === 'egg') { hatchEgg(); after(); return openHerd(); }
   if (it.kind === 'med') {
     if (!S.sick) return say('아프지 않아요! 아껴두세요 💊');
     S.inv[id]--; if (!S.inv[id]) delete S.inv[id];
@@ -1531,7 +1562,9 @@ function win() {
   S.coins += coins; S.kills = (S.kills || 0) + 1; S.happy += 3;
   const got = [`EXP +${exp}`, `🪙${coins}`];
   for (const [it, ch] of e.drops) if (Math.random() < ch) { S.inv[it] = (S.inv[it] || 0) + 1; got.push(ITEMS[it].icon); }
+  if (!e.boss && Math.random() < 0.03) { S.inv.dinoEgg = (S.inv.dinoEgg || 0) + 1; got.push('🥚공룡알!'); }
   if (e.boss) {
+    S.inv.dinoEgg = (S.inv.dinoEgg || 0) + 2; got.push('🥚x2');
     S.bossGauge[battle.zone] = 0;
     S.bossKills[battle.zone] = (S.bossKills[battle.zone] || 0) + 1;
     const first = !DEX.bosses[battle.zone];
@@ -1577,6 +1610,127 @@ function battleItem() {
       } };
   });
   openSheet('🧪 전투 아이템', rows, { html: rows.length ? '' : '<div class="note">쓸 수 있는 회복 아이템이 없어요. 상점에서 회복약을 사두세요.</div>' });
+}
+
+/* =========================================================
+   🦕 공룡 무리: 알 부화 → 같은 공룡 2마리 합성으로 ★ 진화 → 출전(최대 3)
+   ========================================================= */
+const HERD_MAX = 20, PARTY_MAX = 3, STAR_MAX = 5;
+const HERD_SPECIES = ['trex', 'raptor', 'spino', 'tri', 'ptera', 'brachio'];
+const STAR_NAMES = ['', '새끼', '청년', '용사', '영웅', '전설'];
+const SHORT = { trex: '티라노', raptor: '랩터', spino: '스피노', tri: '트리케라', ptera: '프테라', brachio: '브라키오' };
+
+function herdInit(s) { s.herd = s.herd || []; s.party = s.party || []; s.herdSeq = s.herdSeq || 1; }
+function partyStars(s) {
+  if (!s.herd) return 0;
+  return s.party.map(id => s.herd.find(d => d.id === id)).filter(Boolean).reduce((a, d) => a + d.star, 0);
+}
+// 출전 무리 보너스: ★ 하나당 공격·HP +4%, 방치 EXP +5%
+function partyBonus(s) { const n = partyStars(s); return { power: 0.04 * n, idle: 0.05 * n }; }
+const herdName = d => `${STAR_NAMES[d.star]} ${DINOS[d.sp].name}`;
+const stars = n => '★'.repeat(n);
+
+function hatchEgg() {
+  herdInit(S);
+  if (!S.inv.dinoEgg) return say('공룡알이 없어요 🥚');
+  if (S.herd.length >= HERD_MAX) return say(`무리가 가득 찼어요 (${HERD_MAX}마리). 합성하거나 놓아주세요`);
+  S.inv.dinoEgg--; if (!S.inv.dinoEgg) delete S.inv.dinoEgg;
+  const d = { id: S.herdSeq++, sp: pick(HERD_SPECIES), star: 1 };
+  S.herd.push(d);
+  if (S.party.length < PARTY_MAX) S.party.push(d.id);
+  toast(`🐣 부화!\n${DINOS[d.sp].name}`);
+  say(`🐣 ${DINOS[d.sp].name}이(가) 태어나 무리에 들어왔어요!`);
+}
+function findPair(d) { return S.herd.find(o => o.id !== d.id && o.sp === d.sp && o.star === d.star); }
+function mergeDino(d) {
+  const o = findPair(d);
+  if (!o || d.star >= STAR_MAX) return false;
+  const inParty = S.party.includes(d.id) || S.party.includes(o.id);
+  S.herd = S.herd.filter(x => x.id !== d.id && x.id !== o.id);
+  S.party = S.party.filter(id => id !== d.id && id !== o.id);
+  const n = { id: S.herdSeq++, sp: d.sp, star: d.star + 1 };
+  S.herd.push(n);
+  if (inParty || S.party.length < PARTY_MAX) S.party.push(n.id);
+  if (n.star >= STAR_MAX) { DEX.legend = DEX.legend || {}; DEX.legend[n.sp] = true; saveDex(); }
+  return n;
+}
+function mergeAll() {
+  let made = [];
+  for (let star = 1; star < STAR_MAX; star++) {
+    let again = true;
+    while (again) {
+      again = false;
+      for (const d of S.herd.filter(x => x.star === star)) { const n = mergeDino(d); if (n) { made.push(n); again = true; break; } }
+    }
+  }
+  if (!made.length) return say('합성할 짝이 없어요 (같은 종류·같은 ★ 2마리 필요)');
+  const best = made.reduce((a, b) => (b.star > a.star ? b : a));
+  toast(`✨ 합성 ${made.length}번 성공!\n${stars(best.star)} ${DINOS[best.sp].name}`);
+  say(`✨ ${made.length}번 합성했어요! 최고: ${herdName(best)} ${stars(best.star)}`);
+}
+
+// 공룡 썸네일 (캔버스로 그려서 이미지로)
+const thumbCache = {};
+function thumb(sp, star) {
+  const k = sp + (star >= STAR_MAX ? 'u' : '');
+  if (thumbCache[k]) return thumbCache[k];
+  const c = document.createElement('canvas'); c.width = 90; c.height = 68;
+  const g = c.getContext('2d');
+  drawCreature(g, sp, sp === 'brachio' ? 48 : 46, 66, { t: 1.2, face: 1, scale: sp === 'brachio' ? 0.95 : 1.05, ult: star >= STAR_MAX });
+  return (thumbCache[k] = c.toDataURL());
+}
+
+function openHerd() {
+  herdInit(S);
+  const pb = partyBonus(S), eggs = S.inv.dinoEgg || 0;
+  const canMerge = S.herd.some(d => d.star < STAR_MAX && findPair(d));
+  const cells = S.herd.slice().sort((a, b) => b.star - a.star || a.sp.localeCompare(b.sp)).map(d => {
+    const inP = S.party.includes(d.id), pair = d.star < STAR_MAX && findPair(d);
+    return `<button class="hcell ${inP ? 'on' : ''}" data-hid="${d.id}">
+      ${inP ? '<span class="tag">출전</span>' : ''}${pair ? '<span class="tag m">합성↑</span>' : ''}
+      <img src="${thumb(d.sp, d.star)}" alt=""><b>${SHORT[d.sp]}</b><small class="st${d.star}">${stars(d.star)}</small></button>`;
+  }).join('');
+  openSheet(`🦕 공룡 무리 (${S.herd.length}/${HERD_MAX})`, [
+    { icon: '🥚', label: `알 부화하기`, sub: eggs ? `보유 ${eggs}개 · 무작위 공룡이 태어나요` : '사냥·보스·동굴 탐험·상점에서 얻어요', right: `x${eggs}`, disabled: !eggs, keep: true, fn: () => { hatchEgg(); after(); openHerd(); } },
+    { icon: '✨', label: '모두 합성', sub: '같은 종류·같은 ★ 2마리 → ★ 하나 위로', disabled: !canMerge, keep: true, fn: () => { mergeAll(); after(); openHerd(); } },
+  ], {
+    right: `⚔️+${Math.round(pb.power * 100)}% 🔁+${Math.round(pb.idle * 100)}%`,
+    after: `<div class="note">출전한 무리(최대 ${PARTY_MAX}마리)가 따라다니며 도와줘요. ★ 하나당 공격·HP +4%, 방치 경험치 +5% · 카드를 눌러 출전/합성/놓아주기</div>
+      <div class="hgrid">${cells || '<div class="note">아직 무리가 없어요. 공룡알을 모아보세요!</div>'}</div>`,
+  });
+  document.querySelectorAll('[data-hid]').forEach(b => b.onclick = () => herdCard(+b.dataset.hid));
+}
+function herdCard(id) {
+  const d = S.herd.find(x => x.id === id); if (!d) return;
+  const inP = S.party.includes(id), pair = d.star < STAR_MAX && findPair(d);
+  openSheet(`${stars(d.star)} ${herdName(d)}`, [
+    { icon: inP ? '🛑' : '⚔️', label: inP ? '출전 해제' : '출전시키기', sub: inP ? '무리에서 쉬어요' : (S.party.length >= PARTY_MAX ? `출전은 ${PARTY_MAX}마리까지 (다른 공룡을 먼저 해제)` : `공격·HP +${d.star * 4}%, 방치 EXP +${d.star * 5}%`),
+      disabled: !inP && S.party.length >= PARTY_MAX, keep: true,
+      fn: () => { S.party = inP ? S.party.filter(x => x !== id) : [...S.party, id]; after(); openHerd(); } },
+    { icon: '✨', label: '합성', sub: d.star >= STAR_MAX ? '최고 등급이에요 👑' : pair ? `같은 ${stars(d.star)} ${DINOS[d.sp].name}와 합쳐 ${stars(d.star + 1)}로!` : `같은 ${stars(d.star)} ${DINOS[d.sp].name}가 1마리 더 필요해요`,
+      disabled: !pair, keep: true,
+      fn: () => { const n = mergeDino(d); if (n) { toast(`✨ 합성 성공!\n${stars(n.star)} ${DINOS[n.sp].name}`); say(`✨ ${herdName(n)} ${stars(n.star)} 탄생!`); } after(); openHerd(); } },
+    { icon: '👋', label: '놓아주기', sub: `코인 ${10 * d.star * d.star}개를 받아요`, keep: true,
+      fn: () => { S.herd = S.herd.filter(x => x.id !== id); S.party = S.party.filter(x => x !== id); S.coins += 10 * d.star * d.star; say(`👋 ${herdName(d)}을(를) 자연으로 보냈어요`); after(); openHerd(); } },
+    { icon: '←', label: '무리로', keep: true, fn: openHerd },
+  ], { html: `<div style="text-align:center"><img src="${thumb(d.sp, d.star)}" style="width:160px;image-rendering:pixelated"></div>` });
+}
+
+// 출전 무리 그리기 (작게, 주인공 뒤를 따라감)
+const followers = [];
+function partyMembers() { return (S.party || []).map(id => (S.herd || []).find(d => d.id === id)).filter(Boolean); }
+function drawParty(g, leadX, face, t, mode) {
+  const ms = partyMembers();
+  ms.forEach((d, i) => {
+    const target = leadX - face * (18 + i * 15);
+    const f = followers[i] || (followers[i] = { x: target, walk: 0 });
+    const dx = target - f.x;
+    let walking = mode === 'walk';
+    if (mode === 'follow') { if (Math.abs(dx) > 1) { f.x += Math.sign(dx) * Math.min(Math.abs(dx), 0.45); f.walk += 0.22; walking = true; } }
+    else f.x = target;
+    shadow(g, f.x, GY + 2, 6);
+    drawCreature(g, d.sp, f.x, GY + 2, { t: t + i * 0.9, face: mode === 'follow' ? (Math.abs(dx) > 1 ? Math.sign(dx) : face) : face, scale: 0.5 + d.star * 0.03, ult: d.star >= STAR_MAX, walk: walking ? (mode === 'walk' ? t * 7 + i : f.walk) : null });
+  });
 }
 
 /* =========================================================
@@ -1678,12 +1832,13 @@ function autoEvent(A, live) {
 function autoReward(A, e, live) {
   const boost = (S.autoBoostUntil || 0) > Date.now() ? 2 : 1;
   const over = autoOverLevel(A.zone) ? 0.2 : 1; // 너무 쉬운 사냥터면 보상 감소
-  const exp = Math.max(1, Math.round(e.exp * AUTO.expRate * boost * over * (0.9 + Math.random() * 0.2)));
+  const exp = Math.max(1, Math.round(e.exp * AUTO.expRate * boost * over * (1 + partyBonus(S).idle) * (0.9 + Math.random() * 0.2)));
   const coins = Math.max(1, Math.round(rand(...e.coins) * AUTO.coinRate * boost * over));
   S.coins += coins; S.kills = (S.kills || 0) + 1; S.hunger -= 0.15;
   A.total.kills++; A.total.exp += exp; A.total.coins += coins;
   for (const [it, ch] of e.drops) if (Math.random() < ch * AUTO.dropRate) { S.inv[it] = (S.inv[it] || 0) + 1; A.total.items[it] = (A.total.items[it] || 0) + 1; }
   S.bossGauge[A.zone] = (S.bossGauge[A.zone] || 0) + 1;
+  if (Math.random() < 0.006) { S.inv.dinoEgg = (S.inv.dinoEgg || 0) + 1; A.total.items.dinoEgg = (A.total.items.dinoEgg || 0) + 1; if (live) toast('🥚 공룡알 발견!'); }
   if (live) { A.foeGone = Date.now(); A.lastFoe = A.foe; autoFx('foe', `+${exp}EXP`); }
   A.foe = null;
   gainExp(S, exp);
@@ -1735,6 +1890,7 @@ function renderAutoWorld(t) {
   const A = S.auto, now = Date.now(), a = A.anim && now < A.anim.until ? A.anim : null;
   const meX = 44 + (a && a.who === 'me' && a.type === 'lunge' ? 9 : 0);
   A.meX = meX;
+  drawParty(wctx, 44, 1, t, A.phase === 'walk' ? 'walk' : 'idle');
   shadow(wctx, meX, GY + 2, 12);
   if (S.stage === 'ultimate') aura(wctx, meX, GY - 14, t);
   const walking = A.phase === 'walk';
@@ -1896,6 +2052,7 @@ function renderHomeWorld(t) {
     return;
   }
   const key = S.dead ? 'ghost' : spriteKey(S);
+  if (!S.dead && !S.sleeping) drawParty(wctx, pet.x, pet.face, t, 'follow');
   shadow(wctx, pet.x, GY + 2, 12 * (STAGE_SCALE[S.stage] || 1));
   if (S.stage === 'ultimate' && !S.dead) aura(wctx, pet.x, GY - 14, t);
   drawCreature(wctx, key, pet.x, GY + 2 + pet.hopY, petOpts({ t, walk: pet.state === 'walk' ? pet.walk : null }));
@@ -1928,6 +2085,7 @@ function renderBattleWorld(t) {
   const foeX = 120 - (a && a.who === 'foe' && a.type === 'lunge' ? 9 : 0) + (a && a.who === 'foe' && a.type === 'hit' ? 3 : 0);
   const sc = 0.92;
   battle.meX = meX; battle.foeX = foeX;
+  drawParty(wctx, 36, 1, t, 'idle');
   shadow(wctx, meX, GY + 2, 12);
   if (!(a && a.who === 'me' && a.type === 'hit' && blink)) {
     if (S.stage === 'ultimate') aura(wctx, meX, GY - 14, t);
