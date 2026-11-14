@@ -1,6 +1,6 @@
 # 🦖 공룡 키우기
 
-브라우저에서 키우는 다마고치 스타일 공룡 게임. `index.html` 하나로 동작하고 저장은 브라우저(localStorage)에 됩니다.
+브라우저에서 키우는 다마고치 스타일 공룡 게임. 16비트 컬러 도트(부품 조립식 애니메이션), 정글·늪지·화산·유적 배경, 실제 시간대별 하늘. `index.html` 하나로 동작하고 저장은 브라우저(localStorage)에 됩니다.
 
 플레이: https://hapsung-yongsadan.github.io/dino/
 
